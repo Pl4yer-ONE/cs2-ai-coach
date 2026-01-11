@@ -43,26 +43,43 @@ def generate_leaderboard(output_dir: str):
                 name = p['name']
                 raw = p['scores'].get('raw_impact', 0)
                 role = p['role']
-                bucket[name].append((raw, role))
+                kdr = p['stats']['kills'] / max(1, p['stats']['deaths'])
+                bucket[name].append({'raw': raw, 'role': role, 'kdr': kdr})
     
-    # Aggregate: compute mean raw per player with role-based z-score
+    # Aggregate with brutal calibration
     aggregated = []
     
     for name, scores in bucket.items():
-        mean_raw = sum(s[0] for s in scores) / len(scores)
+        raw_scores = [s['raw'] for s in scores]
+        mean_raw = sum(raw_scores) / len(raw_scores)
+        mean_kdr = sum(s['kdr'] for s in scores) / len(scores)
         
-        # Get most common role for this player
-        roles = [s[1] for s in scores]
+        # Get most common role
+        roles = [s['role'] for s in scores]
         main_role = Counter(roles).most_common(1)[0][0]
         
-        # Role-based z-score
-        baseline = ROLE_BASELINES.get(main_role, {'mean': 35.6, 'std': 22.9})
+        # Role-based z-score with caps
+        baseline = ROLE_BASELINES.get(main_role, {'mean': 35.6, 'std': 22.9, 'max': 90})
         role_mean = baseline['mean']
         role_std = baseline['std']
+        role_max = baseline.get('max', 90)
         
         z = (mean_raw - role_mean) / role_std if role_std > 0 else 0
         rate = 50 + (z * 25)
+        
+        # Consistency penalty: high variance = -5
+        if len(raw_scores) >= 2:
+            import statistics
+            raw_std = statistics.stdev(raw_scores)
+            if raw_std > 25:
+                rate -= 5
+        
+        # Role cap
+        rate = min(rate, role_max)
         rate = int(max(0, min(100, rate)))
+        
+        # Smurf detection
+        is_smurf = mean_kdr > 1.6 and mean_raw > 80
         
         games = len(scores)
         aggregated.append({
@@ -70,7 +87,8 @@ def generate_leaderboard(output_dir: str):
             'role': main_role,
             'raw': round(mean_raw, 1),
             'rate': rate,
-            'games': games
+            'games': games,
+            'smurf': is_smurf
         })
     
     # Sort by rate descending
@@ -79,7 +97,8 @@ def generate_leaderboard(output_dir: str):
     # Output
     print("name role raw rate")
     for p in aggregated:
-        print(f"{p['name']} {p['role']} {p['raw']} {p['rate']}")
+        flag = " [SMURF?]" if p['smurf'] else ""
+        print(f"{p['name']} {p['role']} {p['raw']} {p['rate']}{flag}")
 
 
 if __name__ == "__main__":

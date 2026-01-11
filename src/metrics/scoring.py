@@ -4,29 +4,12 @@ Normalizes various raw metrics into 0-100 scores using user-defined weighted for
 """
 
 from typing import Dict, Any, Tuple
+from src.metrics.calibration import ROLE_BASELINES, MAP_WEIGHTS, get_opponent_multiplier
 
 class ScoreEngine:
     """
     Computes normalized scores (0-100) for player performance categories.
     """
-    
-    # Role-based calibration data (from 60 players across 6 demos)
-    ROLE_BASELINES = {
-        'Entry':  {'mean': 42.6, 'std': 22.6},
-        'Anchor': {'mean': 28.6, 'std': 24.1},
-        'AWPer':  {'mean': 46.4, 'std': 22.3},
-        'Support': {'mean': 35.0, 'std': 23.0},  # Default
-        'Lurker': {'mean': 35.0, 'std': 23.0},   # Default
-    }
-    
-    # Map difficulty weights per role
-    MAP_WEIGHTS = {
-        'de_nuke':     {'Entry': 0.90, 'Anchor': 1.10, 'AWPer': 1.00},
-        'de_dust2':    {'Entry': 1.10, 'Anchor': 0.95, 'AWPer': 1.05},
-        'de_ancient':  {'Entry': 1.00, 'Anchor': 1.00, 'AWPer': 0.95},
-        'de_train':    {'Entry': 0.95, 'Anchor': 1.05, 'AWPer': 1.00},
-        'de_overpass': {'Entry': 1.00, 'Anchor': 1.00, 'AWPer': 1.00},
-    }
     
     @staticmethod
     def _normalize(value: float, min_val: float, max_val: float) -> int:
@@ -263,13 +246,16 @@ class ScoreEngine:
                              kast_percentage: float = 0.5, map_name: str = "",
                              opponent_avg: float = 50.0) -> int:
         """
-        Compute final rating with role-based z-score normalization.
+        Compute final rating with brutal calibration.
         
-        Features:
-        1. Role-based normalization (AWPer vs Entry vs Anchor)
-        2. Map difficulty weighting
-        3. Opponent strength adjustment
-        4. KAST bonus/penalty
+        PIPELINE ORDER:
+        1. raw_impact
+        2. role_zscore
+        3. map_weight
+        4. opponent_weight
+        5. kast_adjustment
+        6. role_penalties
+        7. role_cap (anchors NEVER top leaderboard unless god-tier)
         
         Bands:
         - 0-30:  Trash
@@ -281,33 +267,39 @@ class ScoreEngine:
         raw_impact = scores.get("raw_impact", scores.get("impact", 50))
         
         # 1. Role-based z-score normalization
-        baseline = ScoreEngine.ROLE_BASELINES.get(role, {'mean': 35.6, 'std': 22.9})
+        baseline = ROLE_BASELINES.get(role, {'mean': 35.6, 'std': 22.9, 'max': 90})
         role_mean = baseline['mean']
         role_std = baseline['std']
+        role_max = baseline.get('max', 90)  # Role cap
         
         z = (raw_impact - role_mean) / role_std if role_std > 0 else 0
         rating = 50 + (z * 25)
         
-        # 2. Map difficulty adjustment
-        map_weights = ScoreEngine.MAP_WEIGHTS.get(map_name, {})
+        # 2. Map difficulty adjustment (BRUTAL weights)
+        map_weights = MAP_WEIGHTS.get(map_name, {})
         map_factor = map_weights.get(role, 1.0)
         rating *= map_factor
         
-        # 3. Opponent strength adjustment
-        # Playing against 70-rated team = 1.1x, against 30-rated = 0.9x
-        strength_factor = 1.0 + (opponent_avg - 50) / 200
+        # 3. Opponent strength adjustment (smooth formula)
+        strength_factor = get_opponent_multiplier(opponent_avg)
         rating *= strength_factor
         
         # 4. KAST adjustment
         kast_adjustment = (kast_percentage - 0.5) * 10.0
         rating += kast_adjustment
         
-        # 5. Role-specific penalties (entry dying is expected)
+        # 5. Role-specific penalties
         if role == "Entry" and kdr < 0.7:
             rating *= 0.90  # Light penalty, dying is their job
         elif role == "AWPer" and kdr < 0.8:
             rating *= 0.85  # Feeding as AWP is expensive
+        elif role == "Anchor" and kdr < 0.6:
+            rating *= 0.80  # Anchor feeding is worst
+        
+        # 6. Role cap (anchors NEVER top unless god-tier)
+        rating = min(rating, role_max)
         
         # Clamp 0-100
         return int(min(100, max(0, rating)))
+
 
