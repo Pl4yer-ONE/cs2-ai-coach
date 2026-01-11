@@ -1,0 +1,19 @@
+# CS2 AI Coach - Dependencies
+# Demo parsing
+demoparser2>=0.24.0
+awpy>=2.0.0
+
+# Data processing
+polars>=0.20.0
+pandas>=2.0.0
+numpy>=1.24.0
+
+# HTTP client for Ollama
+requests>=2.31.0
+
+# Testing
+pytest>=7.4.0
+
+# Optional: Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
