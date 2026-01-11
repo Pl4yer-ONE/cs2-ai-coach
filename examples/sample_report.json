@@ -1,0 +1,210 @@
+{
+  "meta": {
+    "generated_at": "2026-01-11T10:41:24.180084",
+    "demo_file": "/Users/batman/Downloads/fl0m-mythical-lan-las-vegas-2026-phoenix-vs-rave-bo3-PQrX-tkdkzP8Y-2Z9SZSfP/phoenix-vs-rave-m1-nuke.dem",
+    "map": "Unknown",
+    "analysis_version": "1.0.0"
+  },
+  "summary": {
+    "total_players_analyzed": 10,
+    "total_mistakes_found": 4,
+    "mistakes_by_category": {
+      "POSITIONING": 3,
+      "AIM": 1
+    },
+    "most_common_issue": "POSITIONING"
+  },
+  "players": {
+    "76561197962903163": {
+      "stats": {
+        "kills": 19,
+        "deaths": 7,
+        "kd_ratio": 2.71,
+        "headshot_percentage": 57.9,
+        "damage_per_round": 187.1,
+        "flash_success_rate": 0.0
+      },
+      "mistakes": [
+        {
+          "category": "POSITIONING",
+          "subcategory": "untradeable_deaths",
+          "severity": "medium",
+          "confidence": 0.6,
+          "current_value": "57.1%",
+          "target_value": "<30%",
+          "evidence": {
+            "untradeable_death_ratio": 0.5714285714285714,
+            "total_deaths": 7
+          }
+        }
+      ],
+      "feedback": [],
+      "improvement_priority": [
+        "untradeable_deaths"
+      ]
+    },
+    "76561197963450946": {
+      "stats": {
+        "kills": 5,
+        "deaths": 14,
+        "kd_ratio": 0.36,
+        "headshot_percentage": 20.0,
+        "damage_per_round": 60.4,
+        "flash_success_rate": 0.0
+      },
+      "mistakes": [
+        {
+          "category": "AIM",
+          "subcategory": "headshot_percentage",
+          "severity": "medium",
+          "confidence": 0.32,
+          "current_value": "20.0%",
+          "target_value": ">30%",
+          "evidence": {
+            "headshot_percentage": 0.2,
+            "total_kills": 5,
+            "headshots": 1
+          }
+        }
+      ],
+      "feedback": [],
+      "improvement_priority": [
+        "headshot_percentage"
+      ]
+    },
+    "76561198029235071": {
+      "stats": {
+        "kills": 11,
+        "deaths": 6,
+        "kd_ratio": 1.83,
+        "headshot_percentage": 72.7,
+        "damage_per_round": 104.6,
+        "flash_success_rate": 0.0
+      },
+      "mistakes": [],
+      "feedback": [],
+      "improvement_priority": []
+    },
+    "76561198064058958": {
+      "stats": {
+        "kills": 16,
+        "deaths": 4,
+        "kd_ratio": 4.0,
+        "headshot_percentage": 62.5,
+        "damage_per_round": 133.1,
+        "flash_success_rate": 0.0
+      },
+      "mistakes": [],
+      "feedback": [],
+      "improvement_priority": []
+    },
+    "76561198077179211": {
+      "stats": {
+        "kills": 7,
+        "deaths": 14,
+        "kd_ratio": 0.5,
+        "headshot_percentage": 42.9,
+        "damage_per_round": 63.8,
+        "flash_success_rate": 0.0
+      },
+      "mistakes": [
+        {
+          "category": "POSITIONING",
+          "subcategory": "untradeable_deaths",
+          "severity": "medium",
+          "confidence": 0.85,
+          "current_value": "57.1%",
+          "target_value": "<30%",
+          "evidence": {
+            "untradeable_death_ratio": 0.5714285714285714,
+            "total_deaths": 14
+          }
+        }
+      ],
+      "feedback": [],
+      "improvement_priority": [
+        "untradeable_deaths"
+      ]
+    },
+    "76561198099117149": {
+      "stats": {
+        "kills": 12,
+        "deaths": 7,
+        "kd_ratio": 1.71,
+        "headshot_percentage": 50.0,
+        "damage_per_round": 117.6,
+        "flash_success_rate": 0.0
+      },
+      "mistakes": [],
+      "feedback": [],
+      "improvement_priority": []
+    },
+    "76561198124204178": {
+      "stats": {
+        "kills": 7,
+        "deaths": 15,
+        "kd_ratio": 0.47,
+        "headshot_percentage": 42.9,
+        "damage_per_round": 60.2,
+        "flash_success_rate": 0.0
+      },
+      "mistakes": [],
+      "feedback": [],
+      "improvement_priority": []
+    },
+    "76561198302363499": {
+      "stats": {
+        "kills": 13,
+        "deaths": 8,
+        "kd_ratio": 1.62,
+        "headshot_percentage": 61.5,
+        "damage_per_round": 123.9,
+        "flash_success_rate": 0.0
+      },
+      "mistakes": [
+        {
+          "category": "POSITIONING",
+          "subcategory": "untradeable_deaths",
+          "severity": "high",
+          "confidence": 0.67,
+          "current_value": "62.5%",
+          "target_value": "<30%",
+          "evidence": {
+            "untradeable_death_ratio": 0.625,
+            "total_deaths": 8
+          }
+        }
+      ],
+      "feedback": [],
+      "improvement_priority": [
+        "untradeable_deaths"
+      ]
+    },
+    "76561198404474914": {
+      "stats": {
+        "kills": 4,
+        "deaths": 14,
+        "kd_ratio": 0.29,
+        "headshot_percentage": 100.0,
+        "damage_per_round": 66.9,
+        "flash_success_rate": 0.0
+      },
+      "mistakes": [],
+      "feedback": [],
+      "improvement_priority": []
+    },
+    "76561198880100341": {
+      "stats": {
+        "kills": 9,
+        "deaths": 14,
+        "kd_ratio": 0.64,
+        "headshot_percentage": 77.8,
+        "damage_per_round": 102.5,
+        "flash_success_rate": 0.0
+      },
+      "mistakes": [],
+      "feedback": [],
+      "improvement_priority": []
+    }
+  }
+}

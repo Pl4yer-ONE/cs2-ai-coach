@@ -2,9 +2,23 @@
 
 A metrics-driven post-match coaching system for Counter-Strike 2. Parses demo files, extracts structured data, classifies mistakes using deterministic rules, and generates explainable coaching feedback.
 
+## ✅ Verified Working
+
+Successfully tested on **fl0m Mythical LAN - Phoenix vs Rave (Nuke)**:
+
+| Metric | Result |
+|--------|--------|
+| Players Analyzed | 10 |
+| Kills Parsed | 103 |
+| Damages Parsed | 452 |
+| Issues Classified | 4 |
+| Processing Time | ~5 seconds |
+
+See [`examples/sample_report.md`](examples/sample_report.md) for full output.
+
 ## Features
 
-- **Demo Parsing**: Uses `demoparser2` or `awpy` to parse CS2 .dem files
+- **Demo Parsing**: Uses `demoparser2` (MIT licensed) to parse CS2 .dem files
 - **Feature Extraction**: Extracts aim, positioning, utility, and economy metrics
 - **Deterministic Classification**: Rule-based mistake detection with confidence scores
 - **Explainable Feedback**: Every recommendation is backed by evidence metrics
@@ -15,10 +29,11 @@ A metrics-driven post-match coaching system for Counter-Strike 2. Parses demo fi
 
 ```bash
 # Clone the repository
-cd "CS2 AI COACH"
+git clone https://github.com/Pl4yer-ONE/cs2-ai-coach.git
+cd cs2-ai-coach
 
-# Create virtual environment (recommended)
-python -m venv venv
+# Create virtual environment
+python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
@@ -28,17 +43,17 @@ pip install -r requirements.txt
 ## Quick Start
 
 ```bash
+# Activate environment
+source venv/bin/activate
+
 # Analyze a demo file
 python main.py --demo your_match.dem
 
+# With markdown report
+python main.py --demo your_match.dem --markdown --verbose
+
 # With Ollama NLP feedback
 python main.py --demo your_match.dem --ollama
-
-# Generate markdown report
-python main.py --demo your_match.dem --markdown
-
-# Analyze specific player
-python main.py --demo your_match.dem --player "YourSteamID"
 
 # Check parser status
 python main.py --check-parsers
@@ -48,76 +63,59 @@ python main.py --check-parsers
 
 ```
 cs2-ai-coach/
-├── main.py                    # Entry point
+├── main.py                    # CLI entry point
 ├── config.py                  # Thresholds and settings
 ├── requirements.txt           # Dependencies
-├── src/
-│   ├── parser/               # Demo parsing
-│   │   └── demo_parser.py
-│   ├── features/             # Feature extraction
-│   │   └── extractor.py
-│   ├── metrics/              # Metric analysis
-│   │   ├── aim.py
-│   │   ├── positioning.py
-│   │   ├── utility.py
-│   │   └── economy.py
-│   ├── classifier/           # Mistake classification
-│   │   └── mistake_classifier.py
-│   ├── nlp/                  # Optional NLP phrasing
-│   │   └── ollama_phrasing.py
-│   └── report/               # Report generation
-│       └── generator.py
-└── reports/                  # Output directory
+├── examples/                  # Sample outputs
+│   ├── sample_report.md
+│   └── sample_report.json
+└── src/
+    ├── parser/               # Demo parsing (demoparser2)
+    ├── features/             # Feature extraction
+    ├── metrics/              # Metric analyzers
+    │   ├── aim.py            # HS%, spray control
+    │   ├── positioning.py    # Exposed/untradeable deaths
+    │   ├── utility.py        # Flash success, nade damage
+    │   └── economy.py        # Force buy analysis
+    ├── classifier/           # Rule-based classification
+    ├── nlp/                  # Optional Ollama phrasing
+    └── report/               # JSON/Markdown generation
 ```
 
 ## Coaching Metrics
 
-### Aim
-- Headshot percentage (target: >30%)
-- Spray control efficiency
+| Category | Metric | Target |
+|----------|--------|--------|
+| **Aim** | Headshot % | >30% |
+| **Aim** | Spray control | Damage/shot ratio |
+| **Positioning** | Exposed deaths | <35% |
+| **Positioning** | Untradeable deaths | <30% |
+| **Utility** | Flash success rate | >20% |
+| **Utility** | Nade damage/round | >25 |
+| **Economy** | Force buy deaths | <50% |
 
-### Positioning
-- Exposed death ratio (target: <35%)
-- Untradeable death ratio (target: <30%)
+## Getting Demo Files
 
-### Utility
-- Flash success rate (target: >20%)
-- Grenade damage per round (target: >25)
-
-### Economy
-- Force buy death patterns (heuristic-based)
-
-## Configuration
-
-Edit `config.py` to adjust:
-- Metric thresholds
-- Ollama settings (host, model, timeout)
-- Minimum samples for classification
-- Fallback coaching messages
+- **HLTV**: Download from match pages at [hltv.org](https://hltv.org)
+- **FACEIT**: Download from match history
+- **Your matches**: `~/Library/Application Support/Steam/steamapps/common/Counter-Strike 2/game/csgo/replays/`
 
 ## Using NLP (Optional)
 
 1. Install Ollama: https://ollama.ai
 2. Pull a model: `ollama pull llama3.2`
-3. Run with `--ollama` flag or set `OLLAMA_ENABLED = True` in config
+3. Run with `--ollama` flag
 
-NLP only phrases the deterministic output - it never decides what mistakes are.
-
-## Getting Demo Files
-
-- Download from HLTV, FACEIT, or CS2Stats
-- Use your own matchmaking demos from Steam
-- Location: `Steam/steamapps/common/Counter-Strike 2/game/csgo/replays`
+**Important**: NLP only phrases the deterministic output - it never decides what mistakes are.
 
 ## Sources & Credits
 
-This project uses:
+This project uses open-source tools:
 - [demoparser2](https://github.com/LaihoE/demoparser) - MIT License
-- [awpy](https://github.com/pnxenopoulos/awpy) - MIT License
+- [awpy](https://github.com/pnxenopoulos/awpy) - MIT License (alternative parser)
 
-Inspired by:
-- [PureSkill.gg](https://pureskill.gg) documentation and data science resources
+Inspired by [PureSkill.gg](https://pureskill.gg) documentation and data science resources.
 
 ## License
 
-MIT License
+MIT License - See [LICENSE](LICENSE)
