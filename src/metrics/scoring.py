@@ -10,6 +10,24 @@ class ScoreEngine:
     Computes normalized scores (0-100) for player performance categories.
     """
     
+    # Role-based calibration data (from 60 players across 6 demos)
+    ROLE_BASELINES = {
+        'Entry':  {'mean': 42.6, 'std': 22.6},
+        'Anchor': {'mean': 28.6, 'std': 24.1},
+        'AWPer':  {'mean': 46.4, 'std': 22.3},
+        'Support': {'mean': 35.0, 'std': 23.0},  # Default
+        'Lurker': {'mean': 35.0, 'std': 23.0},   # Default
+    }
+    
+    # Map difficulty weights per role
+    MAP_WEIGHTS = {
+        'de_nuke':     {'Entry': 0.90, 'Anchor': 1.10, 'AWPer': 1.00},
+        'de_dust2':    {'Entry': 1.10, 'Anchor': 0.95, 'AWPer': 1.05},
+        'de_ancient':  {'Entry': 1.00, 'Anchor': 1.00, 'AWPer': 0.95},
+        'de_train':    {'Entry': 0.95, 'Anchor': 1.05, 'AWPer': 1.00},
+        'de_overpass': {'Entry': 1.00, 'Anchor': 1.00, 'AWPer': 1.00},
+    }
+    
     @staticmethod
     def _normalize(value: float, min_val: float, max_val: float) -> int:
         """Helper to clamp and normalize value to 0-100."""
@@ -242,66 +260,54 @@ class ScoreEngine:
     @staticmethod
     def compute_final_rating(scores: Dict[str, int], role: str, kdr: float, untradeable_deaths: int,
                              survival_rate: float = 0.0, opening_kills: int = 0, 
-                             kast_percentage: float = 0.5) -> int:
+                             kast_percentage: float = 0.5, map_name: str = "",
+                             opponent_avg: float = 50.0) -> int:
         """
-        Compute aggregate rating with penalties.
+        Compute final rating with role-based z-score normalization.
         
-        LOCKED WEIGHTS (do not change):
-        - Aim: 0.35
-        - Positioning: 0.25  
-        - Impact: 0.40
+        Features:
+        1. Role-based normalization (AWPer vs Entry vs Anchor)
+        2. Map difficulty weighting
+        3. Opponent strength adjustment
+        4. KAST bonus/penalty
         
-        Impact Bands:
-        - 0-10:  Useless - cap at 30
-        - 10-30: Low Impact - cap at 45
-        - 30-60: Contributor - no cap
-        - 60+:   Carry - no cap
-        
-        Role Adjustments:
-        - Entry: KDR<0.8 penalty (*0.75)
-        - AWPer: Survival bonus (space denial proxy), opening kill bonus
-                 KDR<0.8 penalty (*0.80) - expensive role to feed on
-        
-        Other Penalties:
-        - Death Tax: -0.5 per untradeable death
-        
-        KAST Adjustment:
-        - KAST% < 50%: Penalty up to -10
-        - KAST% > 70%: Bonus up to +10
-        
-        FULL 0-100 SCALE (no arbitrary cap)
         Bands:
-        - 0-40:  Bad
-        - 40-60: Average  
-        - 60-80: Strong
-        - 80-100: Carry
+        - 0-30:  Trash
+        - 30-50: Below Average  
+        - 50-70: Average/Good
+        - 70-85: Strong
+        - 85-100: Carry/God
         """
-        # Z-SCORE NORMALIZATION
-        # Calibration data from 20 aggregated players: mean=35.6, std=22.9
-        IMPACT_MEAN = 35.6
-        IMPACT_STD = 22.9
-        
         raw_impact = scores.get("raw_impact", scores.get("impact", 50))
         
-        # z = (x - mean) / std
-        z = (raw_impact - IMPACT_MEAN) / IMPACT_STD if IMPACT_STD > 0 else 0
+        # 1. Role-based z-score normalization
+        baseline = ScoreEngine.ROLE_BASELINES.get(role, {'mean': 35.6, 'std': 22.9})
+        role_mean = baseline['mean']
+        role_std = baseline['std']
         
-        # Map to 0-100: 50 = average, each std = 25 points (WIDE spread)
+        z = (raw_impact - role_mean) / role_std if role_std > 0 else 0
         rating = 50 + (z * 25)
         
-        # KAST adjustment (minor)
+        # 2. Map difficulty adjustment
+        map_weights = ScoreEngine.MAP_WEIGHTS.get(map_name, {})
+        map_factor = map_weights.get(role, 1.0)
+        rating *= map_factor
+        
+        # 3. Opponent strength adjustment
+        # Playing against 70-rated team = 1.1x, against 30-rated = 0.9x
+        strength_factor = 1.0 + (opponent_avg - 50) / 200
+        rating *= strength_factor
+        
+        # 4. KAST adjustment
         kast_adjustment = (kast_percentage - 0.5) * 10.0
         rating += kast_adjustment
         
-        # Role-specific adjustments
-        if role == "Entry" and kdr < 0.8:
-            rating *= 0.85
-        elif role == "AWPer":
-            if survival_rate > 0.5:
-                rating += 3.0
-            rating += opening_kills * 1.0
-            if kdr < 0.8:
-                rating *= 0.85
+        # 5. Role-specific penalties (entry dying is expected)
+        if role == "Entry" and kdr < 0.7:
+            rating *= 0.90  # Light penalty, dying is their job
+        elif role == "AWPer" and kdr < 0.8:
+            rating *= 0.85  # Feeding as AWP is expensive
         
         # Clamp 0-100
         return int(min(100, max(0, rating)))
+

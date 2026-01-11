@@ -75,7 +75,7 @@ class JsonReporter:
         
         for pid, features in players.items():
             player_mistakes = mistakes.get(pid, [])
-            report["players"][pid] = self._generate_player_report(features, player_mistakes, heatmap_urls)
+            report["players"][pid] = self._generate_player_report(features, player_mistakes, heatmap_urls, map_name)
             
         # Save to file
         filename = f"match_report_{match_id}.json"
@@ -89,7 +89,8 @@ class JsonReporter:
         self, 
         p: PlayerFeatures, 
         mistakes: List[ClassifiedMistake],
-        heatmaps: Dict[str, str] = None
+        heatmaps: Dict[str, str] = None,
+        map_name: str = ""
     ) -> Dict[str, Any]:
         """Generate individual player section."""
         
@@ -164,7 +165,8 @@ class JsonReporter:
             untradeable_deaths,
             survival_rate,
             p.entry_kills,  # Opening kills
-            p.kast_percentage  # KAST%
+            p.kast_percentage,  # KAST%
+            map_name  # Map for difficulty weighting
         )
         
         # Process mistakes with severity weighting
