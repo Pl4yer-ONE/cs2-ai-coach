@@ -233,8 +233,8 @@ class ScoreEngine:
         if kdr < 0.8 and processed > 60:
             processed = 60.0
         
-        # Clamp to reasonable range
-        clamped = int(min(100, max(-10, processed)))
+        # Allow full negative range for bad players
+        clamped = int(min(100, max(-50, processed)))
         
         # Return (raw, clamped) for calibration
         return (true_raw, clamped)
@@ -276,43 +276,32 @@ class ScoreEngine:
         - 60-80: Strong
         - 80-100: Carry
         """
-        aim = scores.get("aim") if scores.get("aim") is not None else 50
-        pos = scores.get("positioning") if scores.get("positioning") is not None else 50
-        imp = scores.get("impact") if scores.get("impact") is not None else 50
+        # Z-SCORE NORMALIZATION
+        # Calibration data from 60 players: mean=35.6, std=39.2
+        IMPACT_MEAN = 35.6
+        IMPACT_STD = 39.2
         
-        rating = (aim * 0.35) + (pos * 0.25) + (imp * 0.40)
+        raw_impact = scores.get("raw_impact", scores.get("impact", 50))
         
-        # 1. Death Tax
-        rating -= (untradeable_deaths * 0.5)
+        # z = (x - mean) / std
+        z = (raw_impact - IMPACT_MEAN) / IMPACT_STD if IMPACT_STD > 0 else 0
         
-        # 2. KAST Adjustment (new)
-        # KAST 70%+ = +10, KAST 50% = 0, KAST 30% = -10
-        # Linear scale: (kast - 0.5) * 50
-        kast_adjustment = (kast_percentage - 0.5) * 20.0
+        # Map to 0-100: 50 = average, each std = 15 points
+        rating = 50 + (z * 15)
+        
+        # KAST adjustment (minor)
+        kast_adjustment = (kast_percentage - 0.5) * 10.0
         rating += kast_adjustment
         
-        # 3. Impact Compression (not hard caps - preserve nuance)
-        if imp <= 10:
-            # Useless band - compress, don't nuke
-            rating *= 0.75
-        elif imp <= 30:
-            # Low impact band - moderate compression
-            rating *= 0.90
-        # 30-60 = contributor, 60+ = carry - no compression
-            
-        # 4. Role-Specific Adjustments
+        # Role-specific adjustments
         if role == "Entry" and kdr < 0.8:
-            rating *= 0.75
+            rating *= 0.85
         elif role == "AWPer":
-            # AWPer space-denial: survival = map control
-            # +5 bonus if survival > 50% (stayed alive, denied space)
             if survival_rate > 0.5:
-                rating += 5.0
-            # Opening picks are high-value for AWPers
-            rating += opening_kills * 2.0
-            # But feeding as AWP is expensive
+                rating += 3.0
+            rating += opening_kills * 1.0
             if kdr < 0.8:
-                rating *= 0.80
-            
-        # FULL 0-100 SCALE - no arbitrary cap
+                rating *= 0.85
+        
+        # Clamp 0-100
         return int(min(100, max(0, rating)))
