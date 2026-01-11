@@ -95,11 +95,25 @@ class FeatureExtractor:
             self._player_features[player_id] = PlayerFeatures(player_id=player_id)
         return self._player_features[player_id]
     
+    def _is_empty(self, data) -> bool:
+        """Safely check if data is empty (works with DataFrame, list, or None)."""
+        if data is None:
+            return True
+        if isinstance(data, pd.DataFrame):
+            return data.empty
+        if isinstance(data, list):
+            return len(data) == 0
+        # For other types, try to check length
+        try:
+            return len(data) == 0
+        except TypeError:
+            return True
+    
     def _extract_basic_stats(self):
         """Extract kills, deaths, assists."""
         kills_df = self.demo.kills
         
-        if kills_df.empty:
+        if self._is_empty(kills_df):
             return
         
         attacker_col = self._get_player_column(kills_df, "attacker")
@@ -138,7 +152,7 @@ class FeatureExtractor:
         kills_df = self.demo.kills
         damages_df = self.demo.damages
         
-        if kills_df.empty:
+        if self._is_empty(kills_df):
             return
         
         attacker_col = self._get_player_column(kills_df, "attacker")
@@ -156,7 +170,7 @@ class FeatureExtractor:
                     player.headshot_percentage = headshots / max(len(group), 1)
         
         # Damage metrics
-        if not damages_df.empty:
+        if not self._is_empty(damages_df):
             dmg_attacker_col = self._get_player_column(damages_df, "attacker")
             if dmg_attacker_col and 'dmg_health' in damages_df.columns:
                 for player_id, group in damages_df.groupby(dmg_attacker_col):
@@ -173,7 +187,7 @@ class FeatureExtractor:
         kills_df = self.demo.kills
         positions_df = self.demo.player_positions
         
-        if kills_df.empty:
+        if self._is_empty(kills_df):
             return
         
         victim_col = self._get_player_column(kills_df, "victim")
@@ -203,7 +217,7 @@ class FeatureExtractor:
                 
                 # Check for trade potential using timestamps
                 death_tick = death.get('tick', 0)
-                if death_tick and not positions_df.empty and 'tick' in positions_df.columns:
+                if death_tick and not self._is_empty(positions_df) and isinstance(positions_df, pd.DataFrame) and 'tick' in positions_df.columns:
                     # Find nearby teammates at time of death
                     nearby_teammates = self._count_nearby_teammates(
                         positions_df, 
@@ -232,7 +246,7 @@ class FeatureExtractor:
         distance_threshold: float = 800
     ) -> int:
         """Count teammates near a position at a given tick."""
-        if positions.empty:
+        if self._is_empty(positions) or not isinstance(positions, pd.DataFrame):
             return 0
         
         # Find position data at the tick
@@ -270,7 +284,7 @@ class FeatureExtractor:
         kills_df = self.demo.kills
         
         # Flash analysis
-        if not flashes_df.empty:
+        if not self._is_empty(flashes_df) and isinstance(flashes_df, pd.DataFrame):
             # Count flashes thrown per player
             thrower_col = self._get_player_column(flashes_df, "attacker")
             if thrower_col:
@@ -282,11 +296,11 @@ class FeatureExtractor:
             
             # Calculate flash assists (flashes that led to kills within ~2 seconds)
             # This requires correlating flash events with kill events by time
-            if not kills_df.empty and 'tick' in flashes_df.columns and 'tick' in kills_df.columns:
+            if not self._is_empty(kills_df) and 'tick' in flashes_df.columns and 'tick' in kills_df.columns:
                 self._calculate_flash_assists(flashes_df, kills_df)
         
         # Grenade damage from damage events
-        if not damages_df.empty and 'weapon' in damages_df.columns:
+        if not self._is_empty(damages_df) and isinstance(damages_df, pd.DataFrame) and 'weapon' in damages_df.columns:
             grenade_weapons = ['hegrenade', 'molotov', 'incgrenade', 'inferno']
             nade_damage = damages_df[damages_df['weapon'].isin(grenade_weapons)]
             
