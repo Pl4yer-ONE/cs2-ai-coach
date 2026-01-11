@@ -3,16 +3,19 @@ Enhanced Heatmap Generation Module
 Professional-quality heatmaps with map overlays, round phases, and high-res output.
 
 Features:
-- Map overlay support (radar images)
+- Map overlay support (radar images from assets)
 - Round-phase separation (early/mid/late)
+- Side separation (CT/T)
 - Professional color schemes (hot/reds)
-- 1920x1080 high DPI output
-- Per-map coordinate normalization
+- 1024x1024 radar-aligned output
 """
 
+import os
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Literal
 import numpy as np
+import matplotlib
+matplotlib.use('Agg') # Force non-interactive backend for thread safety
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.image import imread
@@ -20,61 +23,14 @@ import pandas as pd
 from scipy.ndimage import gaussian_filter
 
 from src.parser.demo_parser import ParsedDemo
+from src.visualization.map_coords import (
+    MapRegistry,
+    MapConfig,
+    world_to_radar,
+    load_map_registry,
+)
+from src.visualization.map_assets import MapAssets
 
-
-# =============================================================================
-# MAP COORDINATE BOUNDS
-# CS2 uses different coordinate systems per map
-# Format: (min_x, max_x, min_y, max_y, radar_pos_x, radar_pos_y, radar_scale)
-# =============================================================================
-MAP_CONFIG: Dict[str, Dict] = {
-    "de_dust2": {
-        "bounds": (-2476, 2127, -1262, 3239),
-        "radar_offset": (-2476, 3239),
-        "radar_scale": 4.4,
-    },
-    "de_mirage": {
-        "bounds": (-3230, 1855, -3420, 1713),
-        "radar_offset": (-3230, 1713),
-        "radar_scale": 5.0,
-    },
-    "de_inferno": {
-        "bounds": (-2087, 2800, -1150, 3870),
-        "radar_offset": (-2087, 3870),
-        "radar_scale": 4.9,
-    },
-    "de_nuke": {
-        "bounds": (-3453, 3607, -4290, -790),
-        "radar_offset": (-3453, -790),
-        "radar_scale": 7.0,
-    },
-    "de_overpass": {
-        "bounds": (-4831, 511, -3551, 1781),
-        "radar_offset": (-4831, 1781),
-        "radar_scale": 5.2,
-    },
-    "de_ancient": {
-        "bounds": (-2953, 2164, -2296, 2382),
-        "radar_offset": (-2953, 2382),
-        "radar_scale": 5.0,
-    },
-    "de_anubis": {
-        "bounds": (-2796, 1869, -2458, 2279),
-        "radar_offset": (-2796, 2279),
-        "radar_scale": 5.2,
-    },
-    "de_vertigo": {
-        "bounds": (-3168, 672, -1792, 2048),
-        "radar_offset": (-3168, 2048),
-        "radar_scale": 4.0,
-    },
-}
-
-DEFAULT_CONFIG = {
-    "bounds": (-4000, 4000, -4000, 4000),
-    "radar_offset": (-4000, 4000),
-    "radar_scale": 8.0,
-}
 
 # Round phase boundaries (by round number, not time)
 ROUND_PHASES = {
@@ -87,44 +43,34 @@ ROUND_PHASES = {
 class HeatmapGenerator:
     """
     Generate professional-quality heatmaps from CS2 demo data.
-    
-    Features:
-    - Kill/death/movement heatmaps
-    - Map image overlays
-    - Round phase filtering
-    - High-resolution output (1920x1080)
     """
     
     def __init__(
         self,
         parsed_demo: ParsedDemo,
         output_dir: str = "outputs/heatmaps",
-        resolution: int = 384,
-        sigma_kills: float = 4.0,
-        sigma_movement: float = 2.0,
-        phase: Optional[str] = None
+        resolution: int = 1024,  # Standard radar size
+        sigma_kills: float = 8.0,
+        sigma_movement: float = 4.0,
+        phase: Optional[str] = None,
+        side: Optional[Literal["CT", "T"]] = None,
+        overlay_enabled: bool = True
     ):
-        """
-        Initialize heatmap generator.
-        
-        Args:
-            parsed_demo: ParsedDemo object from parser
-            output_dir: Base directory to save PNG files
-            resolution: Grid resolution (default 384 for quality)
-            sigma_kills: Gaussian sigma for kill/death heatmaps
-            sigma_movement: Gaussian sigma for movement (lower = sharper)
-            phase: Round phase filter ("early", "mid", "late", or None for all)
-        """
+        """Initialize heatmap generator."""
         self.demo = parsed_demo
         self.resolution = resolution
         self.sigma_kills = sigma_kills
         self.sigma_movement = sigma_movement
         self.phase = phase
+        self.side = side
+        self.overlay_enabled = overlay_enabled
         
-        # Detect map (try parser, then fallback to filename)
+        # Load map registry
+        self._registry = load_map_registry()
+        
+        # Detect map
         self.map_name = self._detect_map_name(parsed_demo)
-        self.map_config = MAP_CONFIG.get(self.map_name, DEFAULT_CONFIG)
-        self.bounds = self.map_config["bounds"]
+        self.map_config = self._registry.get(self.map_name)
         
         # Output directory (per-map)
         map_folder = self.map_name.replace("de_", "") if self.map_name.startswith("de_") else self.map_name
@@ -132,26 +78,29 @@ class HeatmapGenerator:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
         # Map image path
-        self.map_image_path = Path("assets/maps") / f"{map_folder}.png"
-        self.has_map_image = self.map_image_path.exists()
+        self.assets_dir = Path(__file__).parent.parent.parent / "assets" / "maps"
+        
+        # Try specific image from config, then standard name
+        self.map_image_path = self.assets_dir / f"{self.map_name}_radar.png"
+        if not self.map_image_path.exists():
+             self.map_image_path = self.assets_dir / f"{self.map_name}.png"
+        
+        self.has_map_image = self.overlay_enabled and self.map_image_path.exists()
+        
+        if self.overlay_enabled and not self.has_map_image:
+            print(f"  Note: No radar image found at {self.map_image_path}")
+            print(f"        Heatmaps will render without overlay.")
         
         # Create professional colormaps
         self.cmap_hot = self._create_hot_colormap()
         self.cmap_cool = self._create_cool_colormap()
     
     def _detect_map_name(self, parsed_demo: ParsedDemo) -> str:
-        """
-        Detect map name from parser or filename.
-        
-        Priority:
-        1. Parser-provided map name
-        2. Map name extracted from demo filename
-        """
-        # Known map names to look for
+        """Detect map name from parser or filename."""
         known_maps = ["dust2", "mirage", "inferno", "nuke", "overpass", "ancient", "anubis", "vertigo"]
         
         # Try parser first
-        if parsed_demo.map_name:
+        if parsed_demo.map_name and parsed_demo.map_name != "Unknown":
             name = parsed_demo.map_name.lower().strip()
             if "/" in name:
                 name = name.split("/")[-1]
@@ -170,22 +119,10 @@ class HeatmapGenerator:
         
         return "unknown"
     
-    def _normalize_map_name(self, map_name: str) -> str:
-        """Normalize map name to standard format."""
-        if not map_name:
-            return "unknown"
-        name = map_name.lower().strip()
-        # Handle various formats
-        if "/" in name:
-            name = name.split("/")[-1]
-        if not name.startswith("de_") and name in ["dust2", "mirage", "inferno", "nuke", "overpass", "ancient", "anubis", "vertigo"]:
-            name = f"de_{name}"
-        return name
-    
     def _create_hot_colormap(self) -> LinearSegmentedColormap:
         """Create professional hot colormap for kills/deaths."""
         colors = [
-            (0.0, 0.0, 0.0, 0.0),       # Transparent (no data)
+            (0.0, 0.0, 0.0, 0.0),       # Transparent
             (0.1, 0.0, 0.0, 0.3),       # Very dark red
             (0.3, 0.0, 0.0, 0.5),       # Dark red
             (0.6, 0.1, 0.0, 0.7),       # Red
@@ -208,200 +145,115 @@ class HeatmapGenerator:
         ]
         return LinearSegmentedColormap.from_list("heatmap_cool", colors, N=256)
     
+    def _is_empty(self, df: pd.DataFrame) -> bool:
+        """Helper to check if DataFrame is None or empty."""
+        return df is None or df.empty
+
     def _extract_coordinates(
-        self,
-        df: pd.DataFrame,
-        x_col: str = "X",
-        y_col: str = "Y",
-        tick_col: str = "tick"
+        self, 
+        df: pd.DataFrame, 
+        x_col: str, 
+        y_col: str, 
+        team_col: Optional[str] = None,
+        steamid_col: Optional[str] = None,
+        player_id: Optional[str] = None
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Extract coordinates and ticks from DataFrame.
+        if self._is_empty(df):
+             return np.array([]), np.array([]), np.array([])
+             
+        # Find actual columns
+        cols_map = {c.lower(): c for c in df.columns}
         
-        Returns:
-            Tuple of (x_coords, y_coords, ticks) as numpy arrays
-        """
-        if df is None or (isinstance(df, pd.DataFrame) and df.empty):
+        actual_x = cols_map.get(x_col.lower()) or cols_map.get("x")
+        actual_y = cols_map.get(y_col.lower()) or cols_map.get("y")
+        
+        if not actual_x or not actual_y:
             return np.array([]), np.array([]), np.array([])
+
+        # Filter by Player ID if provided
+        if player_id:
+             if not steamid_col:
+                 # Try to guess
+                 if "attacker_steamid" in df.columns: steamid_col = "attacker_steamid"
+                 elif "steamid" in df.columns: steamid_col = "steamid"
+                 elif "user_steamid" in df.columns: steamid_col = "user_steamid"
+                 else: return np.array([]), np.array([]), np.array([])
+             
+             df = df[df[steamid_col].astype(str) == str(player_id)]
+
+        # Filter by Side
+        mask = np.ones(len(df), dtype=bool)
+        if self.side and team_col:
+            actual_team = cols_map.get(team_col.lower()) or cols_map.get("team_name")
+            if actual_team:
+                # Assuming team names are "CT" and "TERRORIST" or similar
+                # Normalize widely used team names
+                target = self.side.upper()
+                if target == "T": target_aliases = ["T", "TERRORIST", "Tea", "Opfor"]
+                else: target_aliases = ["CT", "CTs", "COUNTER-TERRORIST", "Counter-Terrorist"]
+                
+                # Create mask
+                team_vals = df[actual_team].astype(str).str.upper()
+                mask = team_vals.isin([t.upper() for t in target_aliases])
         
-        if isinstance(df, list):
+        filtered_df = df[mask]
+        
+        if filtered_df.empty:
             return np.array([]), np.array([]), np.array([])
+            
+        x = filtered_df[actual_x].to_numpy(dtype=np.float64)
+        y = filtered_df[actual_y].to_numpy(dtype=np.float64)
         
-        # Find coordinate columns
-        x_candidates = [x_col, x_col.lower(), 'attacker_X', 'user_X', 'x']
-        y_candidates = [y_col, y_col.lower(), 'attacker_Y', 'user_Y', 'y']
-        tick_candidates = [tick_col, 'tick', 'Tick']
-        
-        actual_x, actual_y, actual_tick = None, None, None
-        
-        for col in x_candidates:
-            if col in df.columns:
-                actual_x = col
-                break
-        
-        for col in y_candidates:
-            if col in df.columns:
-                actual_y = col
-                break
-        
-        for col in tick_candidates:
-            if col in df.columns:
-                actual_tick = col
-                break
-        
-        if actual_x is None or actual_y is None:
-            return np.array([]), np.array([]), np.array([])
-        
-        # Extract data
-        cols = [actual_x, actual_y]
-        if actual_tick:
-            cols.append(actual_tick)
-        
-        coords = df[cols].dropna()
-        x = coords[actual_x].to_numpy(dtype=np.float64)
-        y = coords[actual_y].to_numpy(dtype=np.float64)
-        ticks = coords[actual_tick].to_numpy(dtype=np.int64) if actual_tick else np.zeros(len(x), dtype=np.int64)
-        
-        return x, y, ticks
+        return x, y, filtered_df.index.to_numpy()
     
-    def _filter_by_phase(
-        self,
-        df: pd.DataFrame,
-        x: np.ndarray,
-        y: np.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Filter coordinates by round phase.
-        
-        Uses round column from dataframe if available.
-        Phase filtering is by round number:
-        - early: rounds 1-5
-        - mid: rounds 6-20  
-        - late: rounds 21+
-        """
-        if self.phase is None or len(x) == 0:
-            return x, y
-        
+    def _filter_by_phase(self, df: pd.DataFrame, indices: np.ndarray) -> np.ndarray:
+        """Filter indices by round phase."""
+        if self.phase is None or len(indices) == 0:
+            return indices
+            
         if self.phase not in ROUND_PHASES:
-            return x, y
-        
+            return indices
+            
         start_round, end_round = ROUND_PHASES[self.phase]
         
         # Try to find round column
         round_col = None
         for col in ['total_rounds_played', 'round', 'round_num', 'Round']:
-            if isinstance(df, pd.DataFrame) and col in df.columns:
+            if col in df.columns:
                 round_col = col
                 break
-        
-        if round_col is None:
-            # No round data available - return all data
-            return x, y
-        
-        # Get rounds matching our coordinates
-        rounds = df[round_col].to_numpy()
-        if len(rounds) != len(x):
-            return x, y
-        
+                
+        if not round_col:
+            return indices
+            
+        rounds = df.loc[indices, round_col].to_numpy()
         mask = (rounds >= start_round) & (rounds <= end_round)
-        return x[mask], y[mask]
-    
-    def _normalize_coordinates(
-        self,
-        x: np.ndarray,
-        y: np.ndarray
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Normalize CS2 coordinates to [0, resolution] range.
-        
-        Uses per-map bounds for accurate positioning.
-        """
-        min_x, max_x, min_y, max_y = self.bounds
-        
-        x_range = max_x - min_x
-        y_range = max_y - min_y
-        
-        if x_range == 0:
-            x_range = 1
-        if y_range == 0:
-            y_range = 1
-        
-        x_norm = (x - min_x) / x_range * (self.resolution - 1)
-        y_norm = (y - min_y) / y_range * (self.resolution - 1)
-        
-        x_norm = np.clip(x_norm, 0, self.resolution - 1)
-        y_norm = np.clip(y_norm, 0, self.resolution - 1)
-        
-        return x_norm, y_norm
-    
-    def _create_density_grid(
-        self,
-        x: np.ndarray,
-        y: np.ndarray
-    ) -> np.ndarray:
-        """Create 2D density grid using vectorized histogram."""
-        if len(x) == 0 or len(y) == 0:
+        return indices[mask]
+
+    def _create_density_grid(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
+        """Create 2D density grid from world coords."""
+        if len(x) == 0:
             return np.zeros((self.resolution, self.resolution))
+            
+        # Convert to radar pixels
+        px, py = world_to_radar(x, y, self.map_config, self.resolution)
         
+        # Filter out-of-bounds
+        mask = (px >= 0) & (px < self.resolution) & (py >= 0) & (py < self.resolution)
+        px, py = px[mask], py[mask]
+        
+        if len(px) == 0:
+            return np.zeros((self.resolution, self.resolution))
+            
+        # Histogram
         grid, _, _ = np.histogram2d(
-            y, x,
+            py, px, # numpy uses (row, col) = (y, x)
             bins=self.resolution,
             range=[[0, self.resolution], [0, self.resolution]]
         )
         
-        # Clamp to non-negative (histogram2d should never produce negative, but be safe)
-        grid = np.clip(grid, 0, None)
-        
         return grid
-    
-    def _render_no_events(
-        self,
-        title: str,
-        output_path: Path
-    ) -> str:
-        """
-        Render placeholder when no events in this phase.
-        
-        Returns:
-            Path to saved file
-        """
-        fig, ax = plt.subplots(figsize=(19.2, 10.8), dpi=100)
-        
-        # Dark background
-        fig.patch.set_facecolor('#1a1a2e')
-        ax.set_facecolor('#1a1a2e')
-        
-        # Title
-        map_display = self.map_name.replace("de_", "").upper() if self.map_name != "unknown" else "UNKNOWN MAP"
-        phase_text = f" ({self.phase.upper()} ROUND)" if self.phase else ""
-        full_title = f"{title}\n{map_display}{phase_text}"
-        ax.set_title(full_title, fontsize=18, fontweight='bold', color='white', pad=20)
-        
-        # No events message
-        ax.text(
-            0.5, 0.5, "No events in this phase",
-            transform=ax.transAxes,
-            fontsize=24,
-            verticalalignment='center',
-            horizontalalignment='center',
-            color='#666666',
-            style='italic'
-        )
-        
-        # Hide axes
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.spines['bottom'].set_visible(False)
-        ax.spines['left'].set_visible(False)
-        
-        plt.tight_layout()
-        plt.savefig(output_path, dpi=100, bbox_inches='tight', facecolor='#1a1a2e', edgecolor='none')
-        plt.close(fig)
-        
-        return str(output_path)
-    
+
     def _render_heatmap(
         self,
         grid: np.ndarray,
@@ -410,203 +262,128 @@ class HeatmapGenerator:
         cmap: LinearSegmentedColormap,
         sigma: float
     ) -> str:
-        """
-        Render high-quality heatmap to PNG.
-        
-        Args:
-            grid: 2D density grid
-            title: Plot title
-            output_path: Path to save PNG
-            cmap: Colormap to use
-            sigma: Gaussian smoothing sigma
-            event_count: Raw event count for display
-            
-        Returns:
-            Path to saved file
-        """
-        # Check for zero events - render placeholder instead
+        """Render high-quality heatmap to PNG."""
         raw_event_count = int(grid.sum())
-        if raw_event_count == 0:
-            return self._render_no_events(title, output_path)
         
         # Apply Gaussian smoothing
-        if sigma > 0:
+        if sigma > 0 and raw_event_count > 0:
             grid = gaussian_filter(grid, sigma=sigma)
-            # Clamp after smoothing
-            grid = np.clip(grid, 0, None)
         
-        # Create figure (1920x1080 at 100 DPI = 19.2 x 10.8 inches)
-        fig, ax = plt.subplots(figsize=(19.2, 10.8), dpi=100)
-        
-        # Dark background
-        fig.patch.set_facecolor('#1a1a2e')
-        ax.set_facecolor('#1a1a2e')
-        
-        # Load and display map image if available
-        if self.has_map_image:
-            try:
-                map_img = imread(str(self.map_image_path))
-                ax.imshow(
-                    map_img,
-                    extent=[0, self.resolution, 0, self.resolution],
-                    aspect='equal',
-                    alpha=0.7,
-                    zorder=1
-                )
-            except Exception as e:
-                print(f"  Warning: Could not load map image: {e}")
-        
-        # Normalize grid for visualization (per-heatmap normalization)
+        # Normalize
         max_density = grid.max()
         if max_density > 0:
             grid_norm = grid / max_density
         else:
             grid_norm = np.zeros_like(grid)
+            
+        # Create figure
+        fig, ax = plt.subplots(figsize=(10.24, 10.24), dpi=100)
         
-        # Plot heatmap overlay
-        im = ax.imshow(
-            grid_norm,
-            cmap=cmap,
-            origin='lower',
-            aspect='equal',
-            interpolation='bilinear',
-            extent=[0, self.resolution, 0, self.resolution],
-            zorder=2
-        )
+        # Background color
+        fig.patch.set_facecolor('#1a1a2e')
         
-        # Colorbar
-        cbar = plt.colorbar(im, ax=ax, fraction=0.03, pad=0.02)
-        cbar.set_label('Density', rotation=270, labelpad=20, color='white', fontsize=12)
-        cbar.ax.yaxis.set_tick_params(color='white')
-        plt.setp(cbar.ax.yaxis.get_ticklabels(), color='white')
+        # 2. Overlay on Map (if available)
+        if self.map_image_path and os.path.exists(self.map_image_path):
+            try:
+                map_img = Image.open(self.map_image_path).convert("RGBA")
+                # Resize if needed to match resolution (though typically we want 1024x1024)
+                if map_img.size != (self.resolution, self.resolution):
+                    map_img = map_img.resize((self.resolution, self.resolution), Image.Resampling.LANCZOS)
+                
+                # Plot map
+                ax.imshow(map_img, extent=[0, self.resolution, self.resolution, 0], zorder=1)
+            except Exception as e:
+                print(f"    ⚠️ Failed to load map image: {e}")
+        else:
+             # Black background if no map
+             ax.set_facecolor('black')
         
-        # Title
-        map_display = self.map_name.replace("de_", "").upper() if self.map_name != "unknown" else "UNKNOWN MAP"
-        phase_text = f" ({self.phase.upper()} ROUND)" if self.phase else ""
-        full_title = f"{title}\n{map_display}{phase_text}"
-        ax.set_title(full_title, fontsize=18, fontweight='bold', color='white', pad=20)
+        # 2. Overlay Heatmap
+        if raw_event_count > 0:
+            ax.imshow(
+                grid_norm,
+                cmap=cmap,
+                origin='upper', # Match image coords
+                extent=[0, self.resolution, self.resolution, 0],
+                alpha=0.8,
+                zorder=2
+            )
         
-        # Hide axes
-        ax.set_xticks([])
-        ax.set_yticks([])
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.spines['bottom'].set_visible(False)
-        ax.spines['left'].set_visible(False)
+        # Title & Annotations
+        side_text = f" ({self.side})" if self.side else ""
+        phase_text = f" [{self.phase.upper()}]" if self.phase else ""
+        full_title = f"{title}{side_text}{phase_text}\n{self.map_name.upper()}"
         
-        # Stats box (show actual raw event count)
-        stats_text = f"Events: {raw_event_count}"
+        ax.set_title(full_title, color='white', fontsize=14, loc='left', pad=10)
+        ax.axis('off')
+        
+        # Stats
         ax.text(
-            0.02, 0.98, stats_text,
-            transform=ax.transAxes,
-            fontsize=12,
-            verticalalignment='top',
-            color='white',
-            bbox=dict(boxstyle='round,pad=0.5', facecolor='#16213e', alpha=0.9, edgecolor='#0f3460')
+            0.02, 0.02, f"Events: {raw_event_count}",
+            transform=ax.transAxes, color='white', fontsize=10,
+            bbox=dict(facecolor='black', alpha=0.5, edgecolor='none')
         )
         
-        # Credit
-        ax.text(
-            0.98, 0.02, 'CS2 AI Coach',
-            transform=ax.transAxes,
-            fontsize=10,
-            verticalalignment='bottom',
-            horizontalalignment='right',
-            color='#888888',
-            style='italic'
-        )
-        
+        # Save
         plt.tight_layout()
-        plt.savefig(output_path, dpi=100, bbox_inches='tight', facecolor='#1a1a2e', edgecolor='none')
+        plt.savefig(output_path, dpi=100, bbox_inches='tight', pad_inches=0, facecolor='#1a1a2e')
         plt.close(fig)
         
         return str(output_path)
-    
-    def generate_kills_heatmap(self) -> str:
-        """Generate heatmap of kill locations."""
-        kills_df = self.demo.kills
+
+    def generate_kills_heatmap(self, player_id: Optional[str] = None) -> str:
+        source = self.demo.kills
+        x, y, indices = self._extract_coordinates(source, "attacker_X", "attacker_Y", "attacker_team_name", "attacker_steamid", player_id)
         
-        x, y, _ = self._extract_coordinates(kills_df, "attacker_X", "attacker_Y")
-        if len(x) == 0:
-            x, y, _ = self._extract_coordinates(kills_df, "X", "Y")
+        # Filter by phase
+        if self.phase:
+            final_indices = self._filter_by_phase(source, indices)
+            mask = np.isin(indices, final_indices)
+            x, y = x[mask], y[mask]
+            
+        grid = self._create_density_grid(x, y)
         
-        x, y = self._filter_by_phase(kills_df, x, y)
-        x_norm, y_norm = self._normalize_coordinates(x, y)
-        grid = self._create_density_grid(x_norm, y_norm)
+        suffix = f"{'_' + self.phase if self.phase else ''}{'_' + self.side if self.side else ''}"
+        if player_id:
+            suffix += f"_{player_id}"
+        path = self.output_dir / f"kills{suffix}.png"
+        return self._render_heatmap(grid, "KILL LOCATIONS", path, self.cmap_hot, self.sigma_kills)
+
         
-        suffix = f"_{self.phase}" if self.phase else ""
-        output_path = self.output_dir / f"kills_heatmap{suffix}.png"
-        
-        return self._render_heatmap(grid, "KILL LOCATIONS", output_path, self.cmap_hot, self.sigma_kills)
-    
-    def generate_deaths_heatmap(self) -> str:
-        """Generate heatmap of death locations."""
-        kills_df = self.demo.kills
-        
-        x, y, _ = self._extract_coordinates(kills_df, "user_X", "user_Y")
-        if len(x) == 0:
-            x, y, _ = self._extract_coordinates(kills_df, "X", "Y")
-        
-        x, y = self._filter_by_phase(kills_df, x, y)
-        x_norm, y_norm = self._normalize_coordinates(x, y)
-        grid = self._create_density_grid(x_norm, y_norm)
-        
-        suffix = f"_{self.phase}" if self.phase else ""
-        output_path = self.output_dir / f"deaths_heatmap{suffix}.png"
-        
-        return self._render_heatmap(grid, "DEATH LOCATIONS", output_path, self.cmap_hot, self.sigma_kills)
+        if self.phase:
+            final_indices = self._filter_by_phase(source, indices)
+            mask = np.isin(indices, final_indices)
+            x, y = x[mask], y[mask]
+            
+        grid = self._create_density_grid(x, y)
+        suffix = f"{'_' + self.phase if self.phase else ''}{'_' + self.side if self.side else ''}"
+        path = self.output_dir / f"deaths{suffix}.png"
+        return self._render_heatmap(grid, "DEATH LOCATIONS", path, self.cmap_hot, self.sigma_kills)
     
     def generate_movement_heatmap(self) -> str:
-        """Generate heatmap of player movement density."""
-        positions_df = self.demo.player_positions
-        source_df = positions_df
+        source = self.demo.player_positions
+        x, y, indices = self._extract_coordinates(source, "X", "Y", "team_name")
         
-        x, y, _ = self._extract_coordinates(positions_df, "X", "Y")
+        # Movement data is huge, filtering by phase is tricky without round column in positions
+        # Assuming positions has 'round' or similar if enriched, else skip phase filter for movement
+        # (Current parser often doesn't propagate round num to every tick)
         
-        if len(x) == 0:
-            print("  Warning: No position data, using kill/death locations as proxy")
-            kills_df = self.demo.kills
-            source_df = kills_df
-            x1, y1, _ = self._extract_coordinates(kills_df, "attacker_X", "attacker_Y")
-            x2, y2, _ = self._extract_coordinates(kills_df, "user_X", "user_Y")
-            x = np.concatenate([x1, x2]) if len(x1) > 0 or len(x2) > 0 else np.array([])
-            y = np.concatenate([y1, y2]) if len(y1) > 0 or len(y2) > 0 else np.array([])
-        
-        x, y = self._filter_by_phase(source_df, x, y)
-        x_norm, y_norm = self._normalize_coordinates(x, y)
-        grid = self._create_density_grid(x_norm, y_norm)
-        
-        suffix = f"_{self.phase}" if self.phase else ""
-        output_path = self.output_dir / f"movement_heatmap{suffix}.png"
-        
-        return self._render_heatmap(grid, "MOVEMENT DENSITY", output_path, self.cmap_cool, self.sigma_movement)
-    
+        grid = self._create_density_grid(x, y)
+        suffix = f"{'_' + self.phase if self.phase else ''}{'_' + self.side if self.side else ''}"
+        path = self.output_dir / f"movement{suffix}.png"
+        return self._render_heatmap(grid, "MOVEMENT DENSITY", path, self.cmap_cool, self.sigma_movement)
+
     def generate_all(self) -> Dict[str, str]:
-        """Generate all heatmaps."""
+        """Generate all types."""
         results = {}
+        try: results["kills"] = self.generate_kills_heatmap()
+        except Exception as e: print(f"Kills heatmap failed: {e}")
         
-        phase_text = f" [{self.phase}]" if self.phase else ""
-        print(f"Generating heatmaps{phase_text}...")
-        print(f"  Map: {self.map_name}")
-        print(f"  Output: {self.output_dir}/")
+        try: results["deaths"] = self.generate_deaths_heatmap()
+        except Exception as e: print(f"Deaths heatmap failed: {e}")
         
-        try:
-            results["kills"] = self.generate_kills_heatmap()
-            print(f"  ✓ Kills: {Path(results['kills']).name}")
-        except Exception as e:
-            print(f"  ✗ Kills failed: {e}")
-        
-        try:
-            results["deaths"] = self.generate_deaths_heatmap()
-            print(f"  ✓ Deaths: {Path(results['deaths']).name}")
-        except Exception as e:
-            print(f"  ✗ Deaths failed: {e}")
-        
-        try:
-            results["movement"] = self.generate_movement_heatmap()
-            print(f"  ✓ Movement: {Path(results['movement']).name}")
-        except Exception as e:
-            print(f"  ✗ Movement failed: {e}")
+        try: results["movement"] = self.generate_movement_heatmap()
+        except Exception as e: print(f"Movement heatmap failed: {e}")
         
         return results
 
@@ -614,25 +391,10 @@ class HeatmapGenerator:
 def generate_heatmaps(
     parsed_demo: ParsedDemo,
     output_dir: str = "outputs/heatmaps",
-    resolution: int = 384,
-    phase: Optional[str] = None
+    resolution: int = 1024,
+    phase: Optional[str] = None,
+    side: Optional[str] = None,
+    overlay_enabled: bool = True
 ) -> Dict[str, str]:
-    """
-    Convenience function to generate all heatmaps.
-    
-    Args:
-        parsed_demo: ParsedDemo object
-        output_dir: Base output directory
-        resolution: Grid resolution
-        phase: Round phase filter ("early", "mid", "late", or None)
-        
-    Returns:
-        Dictionary mapping heatmap type to file path
-    """
-    generator = HeatmapGenerator(
-        parsed_demo=parsed_demo,
-        output_dir=output_dir,
-        resolution=resolution,
-        phase=phase
-    )
+    generator = HeatmapGenerator(parsed_demo, output_dir, resolution, 8.0, 4.0, phase, side, overlay_enabled)
     return generator.generate_all()

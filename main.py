@@ -101,7 +101,13 @@ For more information, see README.md
         type=str,
         choices=["early", "mid", "late"],
         default=None,
-        help="Filter heatmaps by round phase (early=0-20s, mid=20-60s, late=60s+)"
+        help="Filter heatmaps by round phase (early=rounds 1-5, mid=6-20, late=21+)"
+    )
+    
+    parser.add_argument(
+        "--overlay-map",
+        action="store_true",
+        help="Overlay heatmaps on radar map images (requires images in assets/maps/)"
     )
     
     args = parser.parse_args()
@@ -140,7 +146,12 @@ For more information, see README.md
         
         # Step 1b: Generate heatmaps if requested
         if args.heatmap:
-            heatmap_gen = HeatmapGenerator(parsed_demo, phase=getattr(args, 'heatmap_phase', None))
+            overlay = getattr(args, 'overlay_map', False)
+            heatmap_gen = HeatmapGenerator(
+                parsed_demo,
+                phase=getattr(args, 'heatmap_phase', None),
+                overlay_enabled=overlay
+            )
             heatmap_paths = heatmap_gen.generate_all()
         
         # Step 2: Extract features

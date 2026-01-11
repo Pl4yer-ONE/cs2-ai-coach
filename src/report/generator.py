@@ -119,6 +119,18 @@ class ReportGenerator:
                 "headshot_percentage": round(features.headshot_percentage * 100, 1),
                 "damage_per_round": round(features.damage_per_round, 1),
                 "flash_success_rate": round(features.flash_success_rate * 100, 1),
+                # Trade detection stats
+                "entry_deaths": getattr(features, 'entry_deaths', 0),
+                "traded_deaths": getattr(features, 'tradeable_deaths', 0),
+                "untradeable_death_ratio": round(getattr(features, 'untradeable_death_ratio', 0) * 100, 1),
+                # Role detection
+                "detected_role": getattr(features, 'detected_role', 'support'),
+                "entry_death_ratio": round(getattr(features, 'entry_death_ratio', 0) * 100, 1),
+                "primary_death_area": getattr(features, 'primary_death_area', ''),
+                # Round phase deaths
+                "early_round_deaths": getattr(features, 'early_round_deaths', 0),
+                "mid_round_deaths": getattr(features, 'mid_round_deaths', 0),
+                "late_round_deaths": getattr(features, 'late_round_deaths', 0),
             },
             "mistakes": [
                 {
@@ -128,6 +140,7 @@ class ReportGenerator:
                     "confidence": round(m.confidence, 2),
                     "current_value": m.current_value,
                     "target_value": m.target_value,
+                    "tactical_feedback": getattr(m, 'tactical_feedback', ''),
                     "evidence": m.evidence_metrics
                 }
                 for m in mistakes

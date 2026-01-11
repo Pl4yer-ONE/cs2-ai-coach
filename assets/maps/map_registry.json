@@ -1,0 +1,66 @@
+{
+    "de_dust2": {
+        "image": "de_dust2.png",
+        "x_min": -2476,
+        "x_max": 2127,
+        "y_min": -1262,
+        "y_max": 3239,
+        "rotation": 0
+    },
+    "de_mirage": {
+        "image": "de_mirage.png",
+        "x_min": -3230,
+        "x_max": 1855,
+        "y_min": -3420,
+        "y_max": 1713,
+        "rotation": 0
+    },
+    "de_inferno": {
+        "image": "de_inferno.png",
+        "x_min": -2087,
+        "x_max": 2800,
+        "y_min": -1150,
+        "y_max": 3870,
+        "rotation": 0
+    },
+    "de_nuke": {
+        "image": "de_nuke.png",
+        "x_min": -3453,
+        "x_max": 3607,
+        "y_min": -4290,
+        "y_max": -790,
+        "rotation": 0
+    },
+    "de_overpass": {
+        "image": "de_overpass.png",
+        "x_min": -4831,
+        "x_max": 511,
+        "y_min": -3551,
+        "y_max": 1781,
+        "rotation": 0
+    },
+    "de_ancient": {
+        "image": "de_ancient.png",
+        "x_min": -2953,
+        "x_max": 2164,
+        "y_min": -2296,
+        "y_max": 2382,
+        "rotation": 0
+    },
+    "de_anubis": {
+        "image": "de_anubis.png",
+        "x_min": -2796,
+        "x_max": 1869,
+        "y_min": -2458,
+        "y_max": 2279,
+        "rotation": 0
+    },
+    "de_vertigo": {
+        "image": "de_vertigo.png",
+        "x_min": -3168,
+        "x_max": 672,
+        "y_min": -1792,
+        "y_max": 2048,
+        "rotation": 0
+    }
+}

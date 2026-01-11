@@ -114,6 +114,17 @@ class DemoParser:
         
         result = ParsedDemo(demo_path=str(self.demo_path))
         
+        # Extract map name from header (CRITICAL FIX)
+        try:
+            header = parser.parse_header()
+            if header and "map_name" in header:
+                result.map_name = header["map_name"]
+            else:
+                result.map_name = "Unknown"
+        except Exception as e:
+            print(f"Warning: Could not extract map name: {e}")
+            result.map_name = "Unknown"
+        
         # Parse kills with player data
         try:
             kills_df = parser.parse_event(
@@ -138,12 +149,32 @@ class DemoParser:
             print(f"Warning: Could not parse damages: {e}")
             result.damages = pd.DataFrame()
         
+        # Parse round events for timing context
+        try:
+            round_start_df = parser.parse_event("round_start")
+            round_end_df = parser.parse_event("round_end")
+            
+            if round_start_df is not None and round_end_df is not None:
+                # Ensure lengths match or trim to min
+                min_len = min(len(round_start_df), len(round_end_df))
+                result.rounds = pd.DataFrame({
+                    "round_start_tick": round_start_df.get("tick", pd.Series())[:min_len],
+                    "round_end_tick": round_end_df.get("tick", pd.Series())[:min_len],
+                    "winner": round_end_df.get("winner", pd.Series())[:min_len],
+                    "reason": round_end_df.get("reason", pd.Series())[:min_len]
+                })
+            elif round_start_df is not None:
+                result.rounds = round_start_df
+        except Exception as e:
+            print(f"Warning: Could not parse round events: {e}")
+            result.rounds = pd.DataFrame()
+        
         # Parse flash events
         try:
             blind_df = parser.parse_event(
                 "player_blind",
                 player=["X", "Y", "Z", "team_name"],
-                other=["blind_duration"]
+                other=["blind_duration", "attacker_steamid", "attacker_name", "attacker_team_name"]
             )
             result.flashes = blind_df if blind_df is not None else pd.DataFrame()
         except Exception as e:
@@ -176,7 +207,7 @@ class DemoParser:
         # Parse tick data for positions (sample)
         try:
             ticks_df = parser.parse_ticks(
-                ["X", "Y", "Z", "health", "armor_value", "team_name", "is_alive"]
+                ["X", "Y", "Z", "health", "armor_value", "team_name", "is_alive", "vel_X", "vel_Y", "pitch", "yaw", "steamid"]
             )
             result.player_positions = ticks_df if ticks_df is not None else pd.DataFrame()
         except Exception as e:
