@@ -211,6 +211,9 @@ class JsonReporter:
                 "exit_frags": p.exit_frags,
                 "opening_kills_won": p.opening_kills_won,
                 "opening_kills_lost": p.opening_kills_lost,
+                # KAST
+                "kast_rounds": p.kast_rounds,
+                "kast_percentage": round(p.kast_percentage * 100, 1),
                 # Utility
                 "enemies_blinded": p.enemies_blinded,
                 "utility_damage": p.grenade_damage,

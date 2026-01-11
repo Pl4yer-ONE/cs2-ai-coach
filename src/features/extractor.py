@@ -171,6 +171,10 @@ class PlayerFeatures:
     opening_kills_won: int = 0    # Opening kills in rounds team won
     opening_kills_lost: int = 0   # Opening kills in rounds team lost
     
+    # KAST (Kill, Assist, Survived, Traded)
+    kast_rounds: int = 0          # Rounds where player had K, A, S, or T
+    kast_percentage: float = 0.0  # kast_rounds / rounds_played
+    
     # Movement Mechanics
     counter_strafing_score_avg: float = 0.0
     peek_types: Dict[str, int] = field(default_factory=lambda: {"jiggle": 0, "wide": 0, "dry": 0})
@@ -213,6 +217,9 @@ class FeatureExtractor:
         
         # NEW: Kill context with round outcome
         self._extract_kill_contexts()
+        
+        # NEW: KAST (Kill, Assist, Survived, Traded)
+        self._extract_kast()
         
         # New: Run movement analysis (computationally expensive, so selective)
         self._analyze_movement()
@@ -856,6 +863,109 @@ class FeatureExtractor:
                     alive['TERRORIST'] = max(0, alive['TERRORIST'] - 1)
                 
                 is_first = False
+
+    def _extract_kast(self):
+        """
+        Extract KAST (Kill, Assist, Survived, Traded) per round.
+        
+        For each round, a player gets KAST credit if they:
+        - K: Got at least 1 kill
+        - A: Got an assist (flash blind leading to kill)
+        - S: Survived the round
+        - T: Died but was traded (teammate killed their killer within 3s)
+        """
+        kills_df = self.demo.kills
+        rounds_df = self.demo.rounds
+        
+        if self._is_empty(kills_df) or self._is_empty(rounds_df):
+            return
+        
+        att_col = self._get_player_column(kills_df, "attacker")
+        vic_col = self._get_player_column(kills_df, "victim")
+        
+        if not att_col or not vic_col:
+            return
+        
+        # Get all players and total rounds
+        total_rounds = len(rounds_df)
+        if total_rounds == 0:
+            return
+        
+        # For each player, track KAST per round
+        player_kast = {pid: set() for pid in self._player_features.keys()}  # pid -> set of round_nums with KAST
+        
+        # Process each round
+        rounds_in_kills = kills_df['total_rounds_played'].unique() if 'total_rounds_played' in kills_df.columns else []
+        
+        for round_num in rounds_in_kills:
+            round_kills = kills_df[kills_df['total_rounds_played'] == round_num].sort_values('tick')
+            if round_kills.empty:
+                continue
+            
+            # Track kills, deaths, and trades in this round
+            round_killers = set()      # Players who got kills
+            round_deaths = {}          # victim_id -> killer_id
+            trade_victims = set()      # Players whose death was traded
+            
+            kill_list = list(round_kills.iterrows())
+            
+            for idx, (_, kill) in enumerate(kill_list):
+                tick = int(kill.get('tick', 0))
+                attacker_id = str(kill.get(att_col, ""))
+                victim_id = str(kill.get(vic_col, ""))
+                
+                if attacker_id and not pd.isna(kill.get(att_col)):
+                    round_killers.add(attacker_id)
+                
+                if victim_id and not pd.isna(kill.get(vic_col)):
+                    killer_id = attacker_id if attacker_id else ""
+                    round_deaths[victim_id] = (killer_id, tick)
+            
+            # Check trades: if victim died but killer was killed within 3s
+            for victim_id, (killer_id, death_tick) in round_deaths.items():
+                if not killer_id:
+                    continue
+                # Was the killer killed within trade window?
+                for other_victim, (other_killer, other_tick) in round_deaths.items():
+                    if other_victim == killer_id and other_tick > death_tick:
+                        if other_tick - death_tick <= TRADE_WINDOW_TICKS:
+                            trade_victims.add(victim_id)
+                            break
+            
+            # Determine survivors (players who weren't killed)
+            all_players = set(self._player_features.keys())
+            dead_players = set(round_deaths.keys())
+            survivors = all_players - dead_players
+            
+            # Assign KAST credit
+            for pid in self._player_features.keys():
+                got_kast = False
+                
+                # K: Got a kill
+                if pid in round_killers:
+                    got_kast = True
+                
+                # A: Flash assist (simplified - already tracked in utility)
+                # We'll credit if they blinded someone who died
+                # (Not implementing full assist tracking for now - would need flash->kill linking)
+                
+                # S: Survived
+                if pid in survivors:
+                    got_kast = True
+                
+                # T: Traded
+                if pid in trade_victims:
+                    got_kast = True
+                
+                if got_kast:
+                    player_kast[pid].add(round_num)
+        
+        # Compute KAST% for each player
+        for pid, kast_set in player_kast.items():
+            if pid in self._player_features:
+                player = self._player_features[pid]
+                player.kast_rounds = len(kast_set)
+                player.kast_percentage = len(kast_set) / max(1, total_rounds)
 
     def _classify_roles(self):
         """Use RoleClassifier to assign roles."""
