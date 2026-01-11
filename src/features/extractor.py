@@ -168,6 +168,7 @@ class PlayerFeatures:
     kills_in_won_rounds: int = 0
     kills_in_lost_rounds: int = 0
     exit_frags: int = 0
+    swing_kills: int = 0          # Kills that flip man-advantage (diff_before <= -2, after >= -1)
     opening_kills_won: int = 0    # Opening kills in rounds team won
     opening_kills_lost: int = 0   # Opening kills in rounds team lost
     
@@ -854,6 +855,24 @@ class FeatureExtractor:
                         player.opening_kills_won += 1
                     else:
                         player.opening_kills_lost += 1
+                
+                # SWING KILL DETECTION
+                # Track kills that flip man-advantage
+                # diff_before <= -2 and diff_after >= -1 = swing kill
+                attacker_team_upper = attacker_team.upper()
+                if "TERRORIST" in attacker_team_upper or attacker_team_upper == "T":
+                    my_alive = alive.get('TERRORIST', 0)
+                    enemy_alive = alive.get('CT', 0)
+                else:
+                    my_alive = alive.get('CT', 0)
+                    enemy_alive = alive.get('TERRORIST', 0)
+                
+                diff_before = my_alive - enemy_alive
+                diff_after = diff_before + 1  # After kill, enemy has 1 less
+                
+                # Swing kill: losing badly (diff <= -2) to fighting chance (diff >= -1)
+                if diff_before <= -2 and diff_after >= -1:
+                    player.swing_kills += 1
                 
                 # Update alive count (victim died)
                 vic_team = str(kill.get(self._get_team_column(kills_df, "victim"), "")) if self._get_team_column(kills_df, "victim") else ""

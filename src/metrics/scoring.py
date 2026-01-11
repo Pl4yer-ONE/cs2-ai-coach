@@ -158,6 +158,7 @@ class ScoreEngine:
         kills_in_won_rounds: int,
         kills_in_lost_rounds: int,
         exit_frags: int,
+        swing_kills: int,  # Kills that flip man-advantage
         
         # Round-winning plays
         multikills: int, 
@@ -219,8 +220,11 @@ class ScoreEngine:
         if kills_in_won_rounds >= 5:
             round_bonus = 8.0
         
+        # 6. SWING KILLS BONUS (momentum-shifting kills)
+        swing_bonus = swing_kills * 8.0  # High value, less than clutch
+        
         # Sum raw impact (BEFORE any caps/penalties)
-        raw_before_caps = kill_points + entry_points + clutch_points + round_bonus - death_penalty
+        raw_before_caps = kill_points + entry_points + clutch_points + round_bonus + swing_bonus - death_penalty
         
         # Store true raw for calibration
         true_raw = raw_before_caps

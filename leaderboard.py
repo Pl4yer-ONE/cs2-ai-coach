@@ -78,6 +78,10 @@ def generate_leaderboard(output_dir: str):
         # Role cap
         rate = min(rate, role_max)
         
+        # Dumpster tier cap: raw < -30 = max rating 5
+        if mean_raw < -30:
+            rate = min(rate, 5)
+        
         # Smurf detection with PUNISHMENT
         is_smurf = mean_kdr > 1.6 and mean_raw > 80
         smurf_mult = 0.85 if is_smurf else 1.0

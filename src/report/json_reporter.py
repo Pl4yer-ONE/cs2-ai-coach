@@ -136,6 +136,7 @@ class JsonReporter:
             p.kills_in_won_rounds,
             p.kills_in_lost_rounds,
             p.exit_frags,
+            p.swing_kills,  # Momentum-shifting kills
             
             # Round-winning plays
             p.multikills, 
@@ -227,7 +228,8 @@ class JsonReporter:
                 "enemies_blinded": p.enemies_blinded,
                 "utility_damage": p.grenade_damage,
                 "clutches_1v1_won": p.clutches_1v1_won,
-                "clutches_1vN_won": p.clutches_1vN_won
+                "clutches_1vN_won": p.clutches_1vN_won,
+                "swing_kills": p.swing_kills  # Momentum-shifting kills
             },
             "mechanics": {
                 "avg_counter_strafing": round(p.counter_strafing_score_avg, 1),
