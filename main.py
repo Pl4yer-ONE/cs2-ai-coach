@@ -197,7 +197,11 @@ For more information, see README.md
         print(f"JSON report saved: {json_path}")
         
         if args.markdown:
-            md_filename = args.output.replace(".json", ".md") if args.output else None
+            if args.output:
+                base = args.output.rsplit('.', 1)[0] if '.' in args.output else args.output
+                md_filename = f"{base}.md"
+            else:
+                md_filename = None
             md_path = generator.save_markdown(report, md_filename)
             print(f"Markdown report saved: {md_path}")
         
