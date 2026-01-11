@@ -277,17 +277,17 @@ class ScoreEngine:
         - 80-100: Carry
         """
         # Z-SCORE NORMALIZATION
-        # Calibration data from 60 players: mean=35.6, std=39.2
+        # Calibration data from 20 aggregated players: mean=35.6, std=22.9
         IMPACT_MEAN = 35.6
-        IMPACT_STD = 39.2
+        IMPACT_STD = 22.9
         
         raw_impact = scores.get("raw_impact", scores.get("impact", 50))
         
         # z = (x - mean) / std
         z = (raw_impact - IMPACT_MEAN) / IMPACT_STD if IMPACT_STD > 0 else 0
         
-        # Map to 0-100: 50 = average, each std = 15 points
-        rating = 50 + (z * 15)
+        # Map to 0-100: 50 = average, each std = 25 points (WIDE spread)
+        rating = 50 + (z * 25)
         
         # KAST adjustment (minor)
         kast_adjustment = (kast_percentage - 0.5) * 10.0
