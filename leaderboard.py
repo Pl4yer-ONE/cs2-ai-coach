@@ -44,7 +44,9 @@ def generate_leaderboard(output_dir: str):
                 raw = p['scores'].get('raw_impact', 0)
                 role = p['role']
                 kdr = p['stats']['kills'] / max(1, p['stats']['deaths'])
-                bucket[name].append({'raw': raw, 'role': role, 'kdr': kdr})
+                swing = p['stats'].get('swing_kills', 0)
+                wpa = p['stats'].get('wpa', 0.0)
+                bucket[name].append({'raw': raw, 'role': role, 'kdr': kdr, 'swing': swing, 'wpa': wpa})
     
     # Aggregate with brutal calibration
     aggregated = []
@@ -89,6 +91,10 @@ def generate_leaderboard(output_dir: str):
         
         rate = int(max(0, min(100, rate)))
         
+        # Aggregate stats
+        total_wpa = sum(s['wpa'] for s in scores)
+        total_swing = sum(s['swing'] for s in scores)
+        
         games = len(scores)
         aggregated.append({
             'name': name,
@@ -96,7 +102,9 @@ def generate_leaderboard(output_dir: str):
             'raw': round(mean_raw, 1),
             'rate': rate,
             'games': games,
-            'smurf': is_smurf
+            'smurf': is_smurf,
+            'wpa': round(total_wpa, 2),
+            'swing': total_swing
         })
     
     # Sort by rate descending
@@ -122,10 +130,10 @@ def generate_leaderboard(output_dir: str):
     aggregated.sort(key=lambda x: x['rate'], reverse=True)
     
     # Output
-    print("name role raw rate")
+    print("name role raw rate wpa swing")
     for p in aggregated:
         flag = " [SMURF?]" if p['smurf'] else ""
-        print(f"{p['name']} {p['role']} {p['raw']} {p['rate']}{flag}")
+        print(f"{p['name']} {p['role']} {p['raw']} {p['rate']} {p['wpa']} {p['swing']}{flag}")
 
 
 if __name__ == "__main__":

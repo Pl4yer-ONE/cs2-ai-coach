@@ -159,6 +159,7 @@ class ScoreEngine:
         kills_in_lost_rounds: int,
         exit_frags: int,
         swing_score: float,  # Weighted swing score (deficit-based)
+        total_wpa: float,    # Win Probability Added (Moneyball)
         
         # Round-winning plays
         multikills: int, 
@@ -224,8 +225,12 @@ class ScoreEngine:
         # deficit -3+ = +10, -2 = +8, repeat same round = +4
         swing_bonus = swing_score
         
+        # 7. WPA BONUS (Win Probability Added)
+        # 1.0 WPA = 15.0 pts (1 full round win contrib = high value)
+        wpa_bonus = total_wpa * 15.0
+        
         # Sum raw impact (BEFORE any caps/penalties)
-        raw_before_caps = kill_points + entry_points + clutch_points + round_bonus + swing_bonus - death_penalty
+        raw_before_caps = kill_points + entry_points + clutch_points + round_bonus + swing_bonus + wpa_bonus - death_penalty
         
         # Store true raw for calibration
         true_raw = raw_before_caps

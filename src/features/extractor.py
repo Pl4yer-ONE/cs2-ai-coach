@@ -27,6 +27,59 @@ TRADE_WINDOW_TICKS = int(TRADE_WINDOW_SECONDS * 64)
 TICK_RATE = 64  # CS2 tick rate
 
 
+class WinProbabilityModel:
+    """
+    Heuristic Win Probability Model based on Man Advantage.
+    Returns CT Win Probability.
+    
+    Source: HLTV & Scope.gg aggregate stats (approximate).
+    """
+    # Key: (CT_alive, T_alive) -> CT Win Prob
+    # 5v5 = 0.50
+    # XvY: if X > Y, prob > 0.5
+    PROBS = {
+        (5, 5): 0.50,
+        (5, 4): 0.67, (4, 5): 0.33,
+        (5, 3): 0.82, (3, 5): 0.18,
+        (5, 2): 0.94, (2, 5): 0.06,
+        (5, 1): 0.99, (1, 5): 0.01,
+        (5, 0): 1.00, (0, 5): 0.00,
+        
+        (4, 4): 0.50,
+        (4, 3): 0.73, (3, 4): 0.27,
+        (4, 2): 0.89, (2, 4): 0.11,
+        (4, 1): 0.98, (1, 4): 0.02,
+        (4, 0): 1.00, (0, 4): 0.00,
+        
+        (3, 3): 0.50,
+        (3, 2): 0.76, (2, 3): 0.24,
+        (3, 1): 0.94, (1, 3): 0.06,
+        (3, 0): 1.00, (0, 3): 0.00,
+        
+        (2, 2): 0.50,
+        (2, 1): 0.81, (1, 2): 0.19,
+        (2, 0): 1.00, (0, 2): 0.00,
+        
+        (1, 1): 0.50,
+        (1, 0): 1.00, (0, 1): 0.00
+    }
+    
+    @staticmethod
+    def get_ct_win_prob(ct_alive: int, t_alive: int) -> float:
+        """Get CT win probability for a given state."""
+        # Sanity check
+        ct_alive = max(0, min(5, ct_alive))
+        t_alive = max(0, min(5, t_alive))
+        
+        # If one side dead, 100% or 0%
+        if ct_alive == 0 and t_alive > 0: return 0.0
+        if t_alive == 0 and ct_alive > 0: return 1.0
+        if ct_alive == 0 and t_alive == 0: return 0.0 # Round over?
+        
+        # Lookup
+        return WinProbabilityModel.PROBS.get((ct_alive, t_alive), 0.50)
+
+
 @dataclass
 class DeathContext:
     """Contextual information about a single death event."""
@@ -170,6 +223,7 @@ class PlayerFeatures:
     exit_frags: int = 0
     swing_kills: int = 0          # Count of momentum-shifting kills
     swing_score: float = 0.0      # Weighted swing score (deficit-based)
+    total_wpa: float = 0.0        # Win Probability Added (Moneyball metric)
     opening_kills_won: int = 0    # Opening kills in rounds team won
     opening_kills_lost: int = 0   # Opening kills in rounds team lost
     
@@ -857,32 +911,62 @@ class FeatureExtractor:
                     else:
                         player.opening_kills_lost += 1
                 
-                # SWING KILL DETECTION (deficit-based scoring)
-                # Track kills that flip man-advantage
+                
+                # WPA & SWING CALCULATION
                 attacker_team_upper = attacker_team.upper()
+                ct_alive = alive.get('CT', 0)
+                t_alive = alive.get('TERRORIST', 0)
+                
+                # 1. Calculate WPA (Win Probability Added)
+                prob_ct_before = WinProbabilityModel.get_ct_win_prob(ct_alive, t_alive)
+                
                 if "TERRORIST" in attacker_team_upper or attacker_team_upper == "T":
-                    my_alive = alive.get('TERRORIST', 0)
-                    enemy_alive = alive.get('CT', 0)
+                    is_ct = False
+                    my_alive = t_alive
+                    enemy_alive = ct_alive
+                    prob_my_team_before = 1.0 - prob_ct_before
                 else:
-                    my_alive = alive.get('CT', 0)
-                    enemy_alive = alive.get('TERRORIST', 0)
+                    is_ct = True
+                    my_alive = ct_alive
+                    enemy_alive = t_alive
+                    prob_my_team_before = prob_ct_before
                 
+                # Update alive counts for "after" state
+                # Victim died, so enemy count decreases by 1
+                new_ct_alive = ct_alive
+                new_t_alive = t_alive
+                
+                vic_team = str(kill.get(self._get_team_column(kills_df, "victim"), "")) if self._get_team_column(kills_df, "victim") else ""
+                if "CT" in vic_team.upper():
+                    new_ct_alive = max(0, ct_alive - 1)
+                elif "TERRORIST" in vic_team.upper() or vic_team.upper() == "T":
+                    new_t_alive = max(0, t_alive - 1)
+                
+                # Calculate probability after kill
+                prob_ct_after = WinProbabilityModel.get_ct_win_prob(new_ct_alive, new_t_alive)
+                
+                if is_ct:
+                    prob_my_team_after = prob_ct_after
+                else:
+                    prob_my_team_after = 1.0 - prob_ct_after
+                
+                wpa = prob_my_team_after - prob_my_team_before
+                player.total_wpa += wpa
+                
+                # 2. Swing Detection (Deficit-based)
                 diff_before = my_alive - enemy_alive
-                diff_after = diff_before + 1  # After kill, enemy has 1 less
+                diff_after = diff_before + 1
                 
-                # Swing kill: losing badly (diff <= -2) to fighting chance (diff >= -1)
                 if diff_before <= -2 and diff_after >= -1:
                     player.swing_kills += 1
                     
                     # Deficit-based scoring
-                    # Bigger deficit = bigger reward
                     if diff_before <= -3:
-                        base_swing = 10.0  # Hero play
-                    else:  # diff_before == -2
+                        base_swing = 10.0
+                    else:
                         base_swing = 8.0
                     
-                    # Anti-padding: track swings per player per round
-                    # Second swing same round = reduced value
+                    # Anti-padding
                     swing_key = f"{attacker_id}_{round_num}"
                     if not hasattr(self, '_swing_tracker'):
                         self._swing_tracker = {}
@@ -891,19 +975,16 @@ class FeatureExtractor:
                     if prev_swings == 0:
                         swing_value = base_swing
                     elif prev_swings == 1:
-                        swing_value = 4.0  # Second swing = reduced
+                        swing_value = 4.0
                     else:
-                        swing_value = 2.0  # Third+ = minimal
+                        swing_value = 2.0
                     
                     self._swing_tracker[swing_key] = prev_swings + 1
                     player.swing_score += swing_value
-                
-                # Update alive count (victim died)
-                vic_team = str(kill.get(self._get_team_column(kills_df, "victim"), "")) if self._get_team_column(kills_df, "victim") else ""
-                if "CT" in vic_team.upper():
-                    alive['CT'] = max(0, alive['CT'] - 1)
-                elif "TERRORIST" in vic_team.upper() or vic_team.upper() == "T":
-                    alive['TERRORIST'] = max(0, alive['TERRORIST'] - 1)
+
+                # Update global alive state for next iteration
+                alive['CT'] = new_ct_alive
+                alive['TERRORIST'] = new_t_alive
                 
                 is_first = False
 

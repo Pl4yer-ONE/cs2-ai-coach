@@ -137,6 +137,7 @@ class JsonReporter:
             p.kills_in_lost_rounds,
             p.exit_frags,
             p.swing_score,  # Weighted swing score (deficit-based)
+            p.total_wpa,    # Win Probability Added
             
             # Round-winning plays
             p.multikills, 
@@ -229,7 +230,8 @@ class JsonReporter:
                 "utility_damage": p.grenade_damage,
                 "clutches_1v1_won": p.clutches_1v1_won,
                 "clutches_1vN_won": p.clutches_1vN_won,
-                "swing_kills": p.swing_kills  # Momentum-shifting kills
+                "swing_kills": p.swing_kills,  # Momentum-shifting kills
+                "wpa": round(p.total_wpa, 2)   # Win Probability Added
             },
             "mechanics": {
                 "avg_counter_strafing": round(p.counter_strafing_score_avg, 1),
