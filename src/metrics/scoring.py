@@ -222,11 +222,8 @@ class ScoreEngine:
         impact -= tradeable_deaths * 1.0         # Died but traded (minor)
         impact -= untradeable_deaths * 6.0       # Died alone (waste)
         
-        # Minimum: non-negative if any kills
-        if total_kills > 0 and impact < 0:
-            impact = max(impact, 5.0)
-        
-        # Clamp 0-100
+        # No artificial floor - let rating handle punishment
+        # Just prevent true negatives
         return int(min(100, max(0, impact)))
 
     @staticmethod
@@ -281,14 +278,14 @@ class ScoreEngine:
         kast_adjustment = (kast_percentage - 0.5) * 20.0
         rating += kast_adjustment
         
-        # 3. Impact Band Caps (graduated, not binary)
+        # 3. Impact Compression (not hard caps - preserve nuance)
         if imp <= 10:
-            # Useless band - hard cap
-            rating = min(rating, 30.0)
+            # Useless band - compress, don't nuke
+            rating *= 0.75
         elif imp <= 30:
-            # Low impact band - moderate cap
-            rating = min(rating, 45.0)
-        # 30-60 = contributor, 60+ = carry - no cap
+            # Low impact band - moderate compression
+            rating *= 0.90
+        # 30-60 = contributor, 60+ = carry - no compression
             
         # 4. Role-Specific Adjustments
         if role == "Entry" and kdr < 0.8:
