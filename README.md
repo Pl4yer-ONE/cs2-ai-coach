@@ -8,6 +8,10 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/Pl4yer-ONE/cs2-ai-coach?style=social)](https://github.com/Pl4yer-ONE/cs2-ai-coach)
 
+> [!NOTE]
+> **Current Status: 🧪 Public Test Phase (Beta)**
+> The S-Tier Rating System & WPA Analytics are currently undergoing large-scale verification against pro matches.
+
 *Parse demos → Extract features → Calibrate ratings → Expose frauds*
 
 [**Quick Start**](#-quick-start) •
@@ -148,7 +152,8 @@ cs2-ai-coach/
 
 | Metric | Description |
 |--------|-------------|
-| **Swing Kills** | Kills that flip man-advantage (diff <= -2 → >= -1) |
+| **Win Probability Added (WPA)** | "Moneyball" metric. Delta win prob per kill. Includes **Bomb Context** & **Hero Weighting** (1.5x on big plays). |
+| **Swing Kills** | Kills that flip man-advantage (e.g. 3v5 -> 3v4). Deficit weighted (+10 for hero swings). |
 | **KAST%** | Kill/Assist/Survived/Traded per round |
 | **Untradeable Deaths** | Deaths with no teammate nearby |
 | **Exit Frags** | Kills in lost rounds with <15s remaining |
