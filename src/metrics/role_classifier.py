@@ -1,20 +1,29 @@
 """
 Role Classifier
-Strict rule-based role detection as per user audit.
+Strict rule-based role detection - PERFECTED.
+
+Entry = intentionally takes first fights AND has success
+Anchor = plays for trades/late round
+AWPer = primary AWP user
+Support = utility focus
+Lurker = plays alone
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 class RoleClassifier:
     """
     Assigns roles based on deterministic player stats.
     
-    Rules:
+    IMPROVED LOGIC:
     1. AWP Kills > 30% of total -> AWPer
-    2. Entry Attempts > Team Avg -> Entry
+    2. Entry role requires BOTH:
+       - High entry attempts (top 4 in lobby)
+       - Entry success rate > 25% (not just dying first)
+       OR entry_kills >= 2 (proven opener)
     3. Utility Usage > Team Avg -> Support
     4. Avg Distance from Team > Threshold -> Lurker
-    5. Fallback -> Anchor/Rifle
+    5. Default -> Anchor (plays for trades)
     """
     
     def classify_roles(self, players: Dict[str, Any]) -> Dict[str, str]:
@@ -24,66 +33,60 @@ class RoleClassifier:
         """
         results = {}
         
-        # 1. Calculate Team Averages
-        total_entries = 0
-        total_flashes = 0
         count = len(players)
-        if count == 0: return {}
+        if count == 0: 
+            return {}
         
-        for p in players.values():
-            total_entries += p.entry_attempts
-            total_flashes += p.flashes_thrown
-            
-        avg_entries = total_entries / count
+        # Calculate averages
+        total_flashes = sum(p.flashes_thrown for p in players.values())
         avg_flashes = total_flashes / count
         
-        # 3. Calculate Team Entry Thresholds (Top 2 PER TEAM)
-        # We need to group by team first. 
-        # PlayerFeatures doesn't natively store 'team_name' easily accessible here? 
-        # Extractor passes dict[pid] -> PlayerFeatures. 
-        # We need to look up team. FeatureExtractor has it.
-        # Ideally we pass a map of pid->team.
-        # But we can infer from 'enemy_count' or just use clustering?
-        # WAIT. PlayerFeatures DOES NOT have team_name. 
-        # I must fix Extractor to populating team_name into PlayerFeatures first.
+        # Get entry thresholds - top 4 by entry_attempts (2 per team approx)
+        entry_data = [(pid, p.entry_kills + p.entry_deaths) for pid, p in players.items()]
+        entry_data.sort(key=lambda x: x[1], reverse=True)
         
-        # Checking if available... assuming yes for now or using global fallback.
-        # Actually, let's stick to global for this specific tool call but strictly Top 2.
-        # User said "team_top_2". 
+        # Top 4 entry attempt players
+        top_entry_pids = set(pid for pid, _ in entry_data[:4])
         
-        # Workaround: Identify teams by who kills who? No.
-        # Best approach: Pass team info to classify_roles.
-        
-        # For now, I will use a simplified robust logic:
-        # If entry_attempts >= 3 and entry_attempts > avg_entries:
-        # This catches "Bad Entry" without needing team grouping if hard.
-        
-        # But user demanded "team_top_2".
-        # I will assume I can't easily get team yet without refactoring Extractor heavily.
-        # I will use a robust heuristic: Top 30% of lobby entries.
-        
-        entry_counts = sorted([p.entry_attempts for p in players.values()], reverse=True)
-        # Top 4 players in server (2 per team approx)
-        threshold_idx = min(len(entry_counts)-1, 3) 
-        lobby_entry_threshold = entry_counts[threshold_idx] if entry_counts else 0
-        
-        # 4. Assign Roles
+        # Assign Roles
         for pid, p in players.items():
-            role = "Anchor" # Default
+            role = "Anchor"  # Default
             
             # Safe division
             total_kills = max(1, p.kills)
             awp_ratio = p.awp_kills / total_kills
             
-            # Logic Hierarchy (Strict User Priority)
+            # Entry attempts = kills + deaths in opening duels
+            entry_attempts = p.entry_kills + p.entry_deaths
+            entry_success_rate = p.entry_kills / max(1, entry_attempts)
+            
+            # Logic Hierarchy (Strict Priority)
+            
+            # 1. AWPer - clear weapon identity
             if awp_ratio >= 0.30:
                 role = "AWPer"
-            elif p.entry_attempts >= lobby_entry_threshold and p.entry_attempts > 2:
-                role = "Entry"
-            elif p.flashes_thrown > avg_flashes * 1.05 and p.flashes_thrown > 2:
+                
+            # 2. Entry - must have BOTH volume AND success
+            #    Options:
+            #    a) High attempts + decent success rate (not just dying)
+            #    b) At least 2 entry kills (proven opener regardless of deaths)
+            elif pid in top_entry_pids and entry_attempts >= 3:
+                if entry_success_rate >= 0.25 or p.entry_kills >= 2:
+                    role = "Entry"
+                else:
+                    # High attempts but terrible success = NOT a real entry
+                    # They're just dying first due to bad positioning
+                    role = "Anchor"  # Re-classify as anchor (died in bad spots)
+                    
+            # 3. Support - utility focused
+            elif p.flashes_thrown > avg_flashes * 1.2 and p.flashes_thrown >= 3:
                 role = "Support"
+                
+            # 4. Lurker - plays alone
             elif p.avg_teammate_dist > 800:
                 role = "Lurker"
+                
+            # 5. Default - Anchor
             else:
                 role = "Anchor"
                 

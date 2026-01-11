@@ -21,6 +21,35 @@ class JsonReporter:
     def __init__(self, output_dir: str = "outputs/reports"):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+    
+    @staticmethod
+    def _to_relative_paths(heatmaps: Dict, base_marker: str = "outputs/") -> Dict:
+        """
+        Convert absolute heatmap paths to relative paths for portability.
+        Strips everything before 'outputs/' to make paths deployment-friendly.
+        """
+        if not heatmaps:
+            return {}
+        
+        def relativize(path: str) -> str:
+            if not path or not isinstance(path, str):
+                return path
+            # Find the base marker and keep everything after it
+            if base_marker in path:
+                idx = path.find(base_marker)
+                return path[idx:]
+            # Fallback: just return the filename
+            return Path(path).name
+        
+        result = {}
+        for key, value in heatmaps.items():
+            if isinstance(value, dict):
+                result[key] = JsonReporter._to_relative_paths(value, base_marker)
+            elif isinstance(value, str):
+                result[key] = relativize(value)
+            else:
+                result[key] = value
+        return result
         
     def generate_report(
         self, 
@@ -68,16 +97,21 @@ class JsonReporter:
         # Calculate scores
         # Prepare inputs
         kpr = p.kills / max(1, p.rounds_played)
+        kdr = p.kills / max(1, p.deaths)
         untradeable_deaths = p.deaths - p.tradeable_deaths
         survival_rate = (p.rounds_played - p.deaths) / max(1, p.rounds_played)
         
+        # Aim returns (raw, effective) tuple for honesty
+        raw_aim, effective_aim = ScoreEngine.compute_aim_score(
+            p.headshot_percentage, 
+            kpr, 
+            p.damage_per_round,
+            p.counter_strafing_score_avg
+        )
+        
         scores = {
-            "aim": ScoreEngine.compute_aim_score(
-                p.headshot_percentage, 
-                kpr, 
-                p.damage_per_round,
-                p.counter_strafing_score_avg
-            ),
+            "raw_aim": raw_aim,
+            "aim": effective_aim,  # The penalized/effective value used for rating
             "positioning": ScoreEngine.compute_positioning_score(
                 p.untradeable_death_ratio,
                 0.0, # Trade success default
@@ -90,16 +124,30 @@ class JsonReporter:
             ),
             "impact": ScoreEngine.compute_impact_score(
                 p.entry_kills,
+                p.entry_deaths,
                 p.multikills, 
-                p.clutches_1v1_won + p.clutches_1vN_won,
-                untradeable_deaths
+                p.clutches_1v1_won,
+                p.clutches_1vN_won,
+                untradeable_deaths,
+                p.tradeable_deaths,
+                p.damage_per_round,
+                p.kills,
+                p.deaths
             )
         }
         
         # Handle hidden utility score
         if scores["utility"] == -1:
             scores["utility"] = None # Will be null in JSON
-        overall_rating = ScoreEngine.compute_final_rating(scores)
+            
+        overall_rating = ScoreEngine.compute_final_rating(
+            scores, 
+            p.detected_role, 
+            kdr, 
+            untradeable_deaths,
+            survival_rate,
+            p.entry_kills  # Opening kills
+        )
         
         # Process mistakes with severity weighting
         processed_mistakes = []
@@ -120,22 +168,15 @@ class JsonReporter:
             mistake_counts[m.mistake_type] = mistake_counts.get(m.mistake_type, 0) + 1
         top_mistakes = sorted(mistake_counts.items(), key=lambda x: x[1], reverse=True)[:3]
             
-        # Link heatmaps
-        # Heatmap dict keys are likely "kills", "deaths" (global) or player-specific if implemented
-        # The main CLI passes global heatmaps. Multi-heatmap per player logic would need refactoring.
-        # For now, we link the player's generic heatmap if available or the map's heatmaps
-        
-        # Construct relevant heatmap paths relative to report
-        # Construct relevant heatmap paths relative to report
+        # Link heatmaps - convert to relative paths for portability
         player_heatmaps = {}
         if heatmaps:
             if "personal" in heatmaps and p.player_id in heatmaps["personal"]:
-                player_heatmaps = heatmaps["personal"][p.player_id]
+                player_heatmaps = self._to_relative_paths(heatmaps["personal"][p.player_id])
             elif "global" in heatmaps:
-                 player_heatmaps = heatmaps["global"]
-            # Fallback
+                player_heatmaps = self._to_relative_paths(heatmaps["global"])
             elif isinstance(heatmaps, dict):
-                 player_heatmaps = heatmaps
+                player_heatmaps = self._to_relative_paths(heatmaps)
 
         return {
             "name": p.player_name,
@@ -149,7 +190,9 @@ class JsonReporter:
                 "adr": round(p.damage_per_round, 1),
                 "hs_percent": round(p.headshot_percentage * 100, 1),
                 "untradeable_deaths": p.deaths - p.tradeable_deaths,
-                "entry_attempts": p.entry_attempts,
+                "tradeable_deaths": p.tradeable_deaths,
+                "entry_kills": p.entry_kills,
+                "entry_deaths": p.entry_deaths,
                 "multikills": p.multikills,
                 "enemies_blinded": p.enemies_blinded,
                 "utility_damage": p.grenade_damage,

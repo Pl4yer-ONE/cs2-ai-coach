@@ -398,7 +398,7 @@ class FeatureExtractor:
             
             for _, death in grp.iterrows():
                 tick = int(death.get('tick', 0))
-                round_num = int(death.get('total_rounds_played', 0)) + 1
+                round_num = int(death.get('total_rounds_played', 0))  # Don't add 1, match kills_df
                 x = float(death.get('user_X', death.get('X', 0)))
                 y = float(death.get('user_Y', death.get('Y', 0)))
                 
@@ -495,8 +495,10 @@ class FeatureExtractor:
             dists = [d.nearest_teammate_distance for d in player.death_contexts if d.nearest_teammate_distance < 2000]
             player.avg_teammate_dist = float(np.mean(dists)) if dists else 1000.0
             
-            # 2. Entry Attempts
-            player.entry_attempts = player.entry_deaths + int(player.entry_kills * 2) # Approximation
+            # 2. Entry Attempts = Kills + Deaths in opening duels (no approximation needed now)
+            # entry_kills tracked in _extract_clutch_and_opening_duels
+            # entry_deaths tracked in _extract_positioning_metrics
+            # (computed here for ordering - extract_clutch runs after compute_advanced)
             
             # 3. Untradeable ratio
             non_entry = player.deaths - player.entry_deaths
@@ -517,19 +519,15 @@ class FeatureExtractor:
             round_kills = kills_df[kills_df['total_rounds_played'] == r].sort_values('tick')
             if round_kills.empty: continue
             
-            # 1. Opening Duel
+            # 1. Opening Duel - first kill of the round
             first_kill = round_kills.iloc[0]
             attacker = self._get_player_id(first_kill, "attacker")
-            victim = self._get_player_id(first_kill, "victim")
             
+            # Attacker won the opening duel
             if attacker:
                 p = self._ensure_player(attacker)
-                p.entry_attempts += 1
-                p.entry_wins += 1
-            if victim:
-                p = self._ensure_player(victim)
-                p.entry_attempts += 1
-                # Entry death is already counted in basic stats
+                p.entry_kills += 1
+            # Victim's entry_death is already counted in _extract_positioning_metrics via is_entry_frag
                 
             # 2. Clutch Logic
             # Find round winner
