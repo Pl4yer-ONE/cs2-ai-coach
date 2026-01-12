@@ -13,6 +13,9 @@ from src.classifier.mistake_classifier import ClassifiedMistake
 from src.metrics.scoring import ScoreEngine
 from src.report.drills import get_drills_for_mistake
 
+# API Version - keep in sync with README and repo tags
+VERSION = "2.1.0"
+
 class JsonReporter:
     """
     Generates JSON reports from analyzed data.
@@ -67,7 +70,12 @@ class JsonReporter:
                 "match_id": match_id,
                 "map": map_name,
                 "timestamp": datetime.now().isoformat(),
-                "version": "2.0.0"
+                "version": VERSION,
+                "metric_definitions": {
+                    "wpa": "Per-match sum of round win probability deltas caused by player kills",
+                    "final_rating": "Composite score (0-100) combining impact, aim, positioning with role adjustments",
+                    "raw_impact": "Unclamped impact score before caps/multipliers (for calibration)"
+                }
             },
             "players": {},
             "team_summary": self._generate_team_summary(players)
@@ -156,9 +164,9 @@ class JsonReporter:
         scores["impact"] = clamped_impact
         scores["raw_impact"] = round(raw_impact, 1)  # Store raw for calibration
         
-        # Handle hidden utility score
+        # Handle hidden utility score - never output null
         if scores["utility"] == -1:
-            scores["utility"] = None # Will be null in JSON
+            scores["utility"] = 0
             
         overall_rating = ScoreEngine.compute_final_rating(
             scores, 
@@ -203,7 +211,7 @@ class JsonReporter:
         return {
             "name": p.player_name,
             "role": p.detected_role,
-            "rating": overall_rating,
+            "final_rating": overall_rating,
             "scores": scores,
             "stats": {
                 "kills": p.kills,
@@ -211,7 +219,7 @@ class JsonReporter:
                 "kdr": round(p.kills/max(1, p.deaths), 2),
                 "adr": round(p.damage_per_round, 1),
                 "hs_percent": round(p.headshot_percentage * 100, 1),
-                "untradeable_deaths": p.deaths - p.tradeable_deaths,
+                "untradeable_deaths": untradeable_deaths,
                 "tradeable_deaths": p.tradeable_deaths,
                 "entry_kills": p.entry_kills,
                 "entry_deaths": p.entry_deaths,
@@ -234,7 +242,7 @@ class JsonReporter:
                 "wpa": round(p.total_wpa, 2)   # Win Probability Added
             },
             "mechanics": {
-                "avg_counter_strafing": round(p.counter_strafing_score_avg, 1),
+                "avg_counter_strafing": int(round(p.counter_strafing_score_avg)),
                 "peek_stats": p.peek_types
             },
             "top_issues": [k for k,v in top_mistakes],
