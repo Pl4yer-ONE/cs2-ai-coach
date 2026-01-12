@@ -42,23 +42,24 @@ class MistakeClassifier:
         mistakes = []
         
         for death in features.death_contexts:
-            # 1. Untradeable Death (Strict)
-            # Logic: Died, wasn't traded, nearest teammate > TRADE_DIST (300u)
-            if not death.was_traded and not death.tradeable_position:
+            # 1. Untradeable Death (Tuned)
+            # Logic: Died, wasn't traded, nearest teammate > 400u (relaxed from strict)
+            if not death.was_traded and death.nearest_teammate_distance > 400:
                 # Valid Exceptions:
                 # - Entry Fragger (if they had support nearby but trade failed)
                 # - Lurker (late round)
                 
                 is_lurk_exception = (features.detected_role == "Lurker" and death.round_time == "mid")
+                is_entry_exception = death.is_entry_frag  # Entry deaths are expected
                 
-                if not is_lurk_exception:
+                if not is_lurk_exception and not is_entry_exception:
                     mistakes.append(ClassifiedMistake(
                         tick=death.tick,
                         round_num=death.round_num,
                         mistake_type="untradeable_death",
-                        details=f"Died isolated ({int(death.nearest_teammate_distance)}u). No trade possibility.",
-                        severity=0.9,
-                        correction="Ensure you are within 300u of a teammate when taking contact."
+                        details=f"Died isolated ({int(death.nearest_teammate_distance)}u from team). No trade possible.",
+                        severity=0.85,
+                        correction="Stay within 400u of a teammate when taking contact."
                     ))
 
             # 2. Dry Peek vs AWP
@@ -83,25 +84,25 @@ class MistakeClassifier:
                     correction="Use support flashes or jiggle peek before committing."
                 ))
 
-            # 4. Bad Spacing (Clumping)
-            if death.teammates_nearby >= 2 and death.nearest_teammate_distance < 150:
+            # 4. Bad Spacing (Clumping) - Tuned threshold
+            if death.teammates_nearby >= 2 and death.nearest_teammate_distance < 200:
                 mistakes.append(ClassifiedMistake(
                     tick=death.tick,
                     round_num=death.round_num,
                     mistake_type="bad_spacing_clump",
-                    details="Died stacked on teammates (<150u).",
-                    severity=0.6,
+                    details=f"Died stacked on {death.teammates_nearby} teammates (<200u).",
+                    severity=0.65,
                     correction="Maintain spacing to avoid spraydowns and collateral damage."
                 ))
             
-            # 5. Late Round Solo throw
-            if death.round_time == "late" and death.nearest_teammate_distance > 1500 and not death.was_traded:
+            # 5. Late Round Solo - Tuned threshold
+            if death.round_time == "late" and death.nearest_teammate_distance > 800 and not death.was_traded:
                  mistakes.append(ClassifiedMistake(
                     tick=death.tick,
                     round_num=death.round_num,
                     mistake_type="solo_late_round",
-                    details="Died in late round (>60s) completely alone (>1500u).",
-                    severity=0.8,
+                    details=f"Died in late round alone ({int(death.nearest_teammate_distance)}u from team).",
+                    severity=0.75,
                     correction="In late rounds, group up. Playing solo makes you an easy target."
                 ))
 
