@@ -5,13 +5,45 @@ All notable changes to the CS2 AI Coach project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-01-12
+
+### 🎮 DEMO PLAYER EDITION
+
+Major release introducing standalone demo playback without CS2 installed.
+
+### Added
+- **Demo Player** (`src/player/`) — Visual demo playback with Pygame
+  - `python main.py play <demo.dem>` — New CLI command
+  - Controls: Space (pause), ←/→ (seek), ↑/↓ (rounds), +/- (speed), 1-9 (jump)
+  - Player dots with team colors (CT=blue, T=orange)
+  - Kill feed with weapon/headshot indicators
+  - HUD with round info, progress bar, tick counter
+  - Grid fallback when radar images unavailable
+
+- **Dynamic Tickrate** — Read from demo header (`playback_ticks / playback_time`)
+  - Supports 64-tick (MM) and 128-tick (Faceit)
+  - No more hardcoded assumptions
+
+- **Performance Optimizations**
+  - O(log n) tick lookup via `np.searchsorted` on pre-built index
+  - LRU cache (OrderedDict) with 500-entry limit and proper eviction
+  - Frame skipping at high playback speeds
+  - Delta-time clamped (MAX_DT=0.1) to prevent jumps on focus loss
+
+- **Safe Seek** — Bounds checking + snap to nearest valid tick
+
+### Changed
+- **CLI Architecture** — Subcommands: `play`, `analyze`, `check-parsers`
+- **ParsedDemo** — Added `tickrate` field to dataclass
+
+### Dependencies
+- Added `pygame>=2.5.0`
+
+---
+
 ## [2.9.0] - 2026-01-12
 
 ### 🚀 PRODUCTION READY RELEASE
-
-This release marks the first production-ready version of the CS2 AI Coach rating system.
-All major calibration issues have been resolved and the system produces realistic, 
-exploit-resistant player ratings.
 
 ### Added
 - **Rotator Ceiling**: Maximum rating of 95 for Rotator role (impact multipliers, not stars)

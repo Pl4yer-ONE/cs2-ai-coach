@@ -6,14 +6,14 @@
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.9.0-orange.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-3.0.0-orange.svg)](CHANGELOG.md)
 [![Tests](https://img.shields.io/badge/tests-26%20passing-brightgreen.svg)](tests/)
 
-**Brutal, telemetry-driven performance audits. No hallucinations.**
+**Forensic demo analysis. Exploit-resistant ratings. Visual playback.**
 
 ---
 
-[Installation](#installation) • [Usage](#usage) • [Rating System](#rating-system) • [API](#api-reference) • [License](#license)
+[Installation](#installation) • [Demo Player](#demo-player) • [Analysis](#analysis) • [Rating System](#rating-system) • [API](#api-reference)
 
 </div>
 
@@ -21,22 +21,39 @@
 
 ## What is FragAudit?
 
-FragAudit is a forensic analysis engine for Counter-Strike 2 demos. It dissects every kill, death, and round to produce **accurate, exploit-resistant player ratings**.
+FragAudit is a **forensic analysis engine** for Counter-Strike 2 demos. It combines:
+
+- **Performance Auditing** — Telemetry-driven ratings with exploit resistance
+- **Visual Playback** — Watch demos without CS2 installed
+- **Role Detection** — AWPer, Entry, Trader, Rotator, Anchor from behavior
 
 No magic numbers. No inflated stats. Just **audited performance**.
 
 ---
 
-## Features
+## Demo Player
 
-| Feature | Description |
-|---------|-------------|
-| **Role Detection** | AWPer, Entry, Trader, Rotator, Anchor — detected from behavior |
-| **Impact Rating** | 0-100 score from kills, entries, clutches, WPA |
-| **Player Tracking** | Compare same player across multiple demos |
-| **Trend Analysis** | Improving, declining, or stable performance |
-| **Consistency Score** | How stable is their rating match-to-match? |
-| **Exploit Resistance** | Exit farming, stat padding, inflation — all penalized |
+**NEW in v3.0.0** — Standalone demo playback without CS2.
+
+```bash
+python main.py play match/demo.dem
+```
+
+<table>
+<tr><td><b>Control</b></td><td><b>Action</b></td></tr>
+<tr><td>Space</td><td>Play/Pause</td></tr>
+<tr><td>←/→</td><td>Seek 5 seconds</td></tr>
+<tr><td>↑/↓</td><td>Previous/Next round</td></tr>
+<tr><td>+/-</td><td>Speed control (0.25x–4x)</td></tr>
+<tr><td>1-9</td><td>Jump to round</td></tr>
+<tr><td>ESC</td><td>Quit</td></tr>
+</table>
+
+**Features:**
+- Dynamic tickrate detection (64/128 tick)
+- O(log n) tick lookup with binary search
+- LRU cache for smooth playback
+- Delta-time clamped for stability
 
 ---
 
@@ -47,28 +64,33 @@ git clone https://github.com/Pl4yer-ONE/FragAudit.git
 cd FragAudit
 
 python -m venv venv
-source venv/bin/activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
 pip install -r requirements.txt
 ```
 
 ---
 
-## Usage
+## Analysis
 
 ### Analyze Demo
 ```bash
-python -m src.main demo.dem --output ./output
+python main.py analyze --demo match.dem
 ```
 
-### Batch Process
+### Generate Reports
 ```bash
-python -m src.main ./demos/ --output ./output
+python main.py analyze --demo match.dem --output report.json --markdown
 ```
 
-### Player Comparison
+### Generate Heatmaps
 ```bash
-python -m src.analytics.player_tracker ./output
+python main.py analyze --demo match.dem --heatmap
+```
+
+### Check Parser Status
+```bash
+python main.py check-parsers
 ```
 
 ---
@@ -88,37 +110,48 @@ python -m src.analytics.player_tracker ./output
 
 ### Anti-Exploit Rules
 
-| Rule | Trigger | Penalty |
-|------|---------|---------|
+| Rule | Trigger | Effect |
+|------|---------|--------|
 | Kill Gate | raw > 105, kills < 18 | 0.90x |
 | Exit Tax | exits >= 8 | 0.85x |
-| KDR Cap | KDR < 0.8 | max 75 |
+| Low KDR Cap | KDR < 0.8 | max 75 |
 | Trader Ceiling | Trader, KDR < 1.0 | max 80 |
 | Rotator Ceiling | Rotator role | max 95 |
 | Floor | Always | min 15 |
 
 ---
 
-## Player Tracking
+## Architecture
 
-Track performance across matches:
-
-```json
-{
-  "name": "REZ",
-  "matches_played": 3,
-  "avg_rating": 88.3,
-  "form_rating": 88.3,
-  "consistency": 25.1,
-  "trend": "stable"
-}
+```
+FragAudit/
+├── src/
+│   ├── parser/          # Demo parsing (demoparser2/awpy)
+│   ├── features/        # Feature extraction
+│   ├── metrics/         # Scoring engine
+│   ├── classifier/      # Mistake classification
+│   ├── player/          # Demo playback [NEW]
+│   ├── visualization/   # Heatmaps
+│   └── report/          # JSON/Markdown output
+├── match/               # Demo files
+├── outputs/             # Generated reports
+└── tests/               # Unit tests
 ```
 
 ---
 
 ## API Reference
 
-### ScoreEngine
+### Demo Player
+```python
+from src.player import DemoPlayer, Renderer
+
+player = DemoPlayer("match/demo.dem")
+renderer = Renderer(player)
+renderer.run()
+```
+
+### Score Engine
 ```python
 from src.metrics.scoring import ScoreEngine
 
@@ -131,7 +164,7 @@ rating = ScoreEngine.compute_final_rating(
 )
 ```
 
-### PlayerTracker
+### Player Tracker
 ```python
 from src.analytics.player_tracker import PlayerTracker
 
@@ -152,6 +185,17 @@ python -m pytest tests/ -v
 
 ---
 
+## Performance
+
+| Metric | Value |
+|--------|-------|
+| Tick lookup | O(log n) binary search |
+| Cache | 500-entry LRU |
+| Frame skip | Scales with speed |
+| dt clamp | 100ms max (stability) |
+
+---
+
 ## License
 
 MIT License. See [LICENSE](LICENSE).
@@ -161,5 +205,7 @@ MIT License. See [LICENSE](LICENSE).
 <div align="center">
 
 **FragAudit** — *Where every frag gets audited.*
+
+*v3.0.0 — Demo Player Edition*
 
 </div>

@@ -7,7 +7,8 @@ Parses demo files, extracts features, classifies mistakes, and generates
 explainable coaching feedback.
 
 Usage:
-    python main.py --demo path/to/demo.dem [--ollama] [--output report.json]
+    python main.py analyze --demo path/to/demo.dem [--ollama] [--output report.json]
+    python main.py play path/to/demo.dem
 """
 
 import argparse
@@ -29,53 +30,64 @@ def main():
         description="CS2 AI Coach - Post-match coaching system",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
+Commands:
+    analyze    Analyze demo and generate coaching report
+    play       Play demo file in visual player (requires pygame)
+    
 Examples:
-    python main.py --demo match.dem
-    python main.py --demo match.dem --ollama
-    python main.py --demo match.dem --heatmap
-    python main.py --demo match.dem --output my_report.json --markdown
+    python main.py analyze --demo match.dem
+    python main.py analyze --demo match.dem --ollama --heatmap
+    python main.py play match/acend-vs-washington-m1-dust2.dem
     
 For more information, see README.md
         """
     )
     
-    parser.add_argument(
+    subparsers = parser.add_subparsers(dest="command", help="Command to run")
+    
+    # =========================================================================
+    # PLAY command
+    # =========================================================================
+    play_parser = subparsers.add_parser("play", help="Play demo file in visual player")
+    play_parser.add_argument("demo", type=str, help="Path to CS2 demo file (.dem)")
+    
+    # =========================================================================
+    # ANALYZE command
+    # =========================================================================
+    analyze_parser = subparsers.add_parser("analyze", help="Analyze demo and generate report")
+    
+    analyze_parser.add_argument(
         "--demo",
         type=str,
+        required=True,
         help="Path to CS2 demo file (.dem)"
     )
     
-    parser.add_argument(
+    analyze_parser.add_argument(
         "--ollama",
         action="store_true",
         help="Enable Ollama for natural language feedback"
     )
     
-    parser.add_argument(
+    analyze_parser.add_argument(
         "--output",
         type=str,
         help="Output filename for JSON report"
     )
     
-    parser.add_argument(
+    analyze_parser.add_argument(
         "--markdown",
         action="store_true",
         help="Also generate Markdown report"
     )
     
-    parser.add_argument(
+    analyze_parser.add_argument(
         "--player",
         type=str,
         help="Analyze specific player only (by Steam ID or name)"
     )
     
-    parser.add_argument(
-        "--check-parsers",
-        action="store_true",
-        help="Check available demo parsers and exit"
-    )
-    
-    parser.add_argument(
+    analyze_parser.add_argument(
         "--parser",
         type=str,
         choices=["auto", "demoparser2", "awpy"],
@@ -83,44 +95,75 @@ For more information, see README.md
         help="Parser to use (default: auto)"
     )
     
-    parser.add_argument(
-        "--verbose",
-        "-v",
+    analyze_parser.add_argument(
+        "--verbose", "-v",
         action="store_true",
         help="Verbose output"
     )
     
-    parser.add_argument(
+    analyze_parser.add_argument(
         "--heatmap",
         action="store_true",
         help="Generate kill/death/movement heatmaps"
     )
     
-    parser.add_argument(
+    analyze_parser.add_argument(
         "--heatmap-phase",
         type=str,
         choices=["early", "mid", "late"],
         default=None,
-        help="Filter heatmaps by round phase (early=rounds 1-5, mid=6-20, late=21+)"
+        help="Filter heatmaps by round phase"
     )
     
-    parser.add_argument(
+    analyze_parser.add_argument(
         "--overlay-map",
         action="store_true",
-        help="Overlay heatmaps on radar map images (requires images in assets/maps/)"
+        help="Overlay heatmaps on radar map images"
     )
     
+    # =========================================================================
+    # CHECK-PARSERS command
+    # =========================================================================
+    check_parser = subparsers.add_parser("check-parsers", help="Check available demo parsers")
+    
+    # Parse arguments
     args = parser.parse_args()
     
-    # Check parsers if requested
-    if args.check_parsers:
-        print_parser_status()
+    # Route to command handler
+    if args.command == "play":
+        return run_play(args)
+    elif args.command == "analyze":
+        return run_analyze(args)
+    elif args.command == "check-parsers":
+        return print_parser_status()
+    else:
+        parser.print_help()
         return 0
+
+
+def run_play(args) -> int:
+    """Run the demo player."""
+    demo_path = Path(args.demo)
     
-    # Require --demo for analysis
-    if not args.demo:
-        parser.error("--demo is required for analysis. Use --check-parsers to check parser availability.")
+    if not demo_path.exists():
+        print(f"Error: Demo file not found: {args.demo}")
+        return 1
     
+    try:
+        from src.player.renderer import run_player
+        run_player(str(demo_path))
+        return 0
+    except ImportError as e:
+        print(f"Error: {e}")
+        print("Install pygame: pip install pygame")
+        return 1
+    except Exception as e:
+        print(f"Error: {e}")
+        return 1
+
+
+def run_analyze(args) -> int:
+    """Run demo analysis."""
     # Validate demo file
     demo_path = Path(args.demo)
     if not demo_path.exists():
@@ -130,7 +173,9 @@ For more information, see README.md
     if not demo_path.suffix.lower() == ".dem":
         print(f"Warning: File does not have .dem extension: {args.demo}")
     
-    if args.verbose:
+    verbose = getattr(args, 'verbose', False)
+    
+    if verbose:
         print(f"Analyzing demo: {demo_path}")
     
     try:
@@ -139,7 +184,7 @@ For more information, see README.md
         demo_parser = DemoParser(str(demo_path), parser=args.parser)
         parsed_demo = demo_parser.parse()
         
-        if args.verbose:
+        if verbose:
             print(f"  Parser used: {demo_parser.parser_type}")
             print(f"  Kills found: {len(parsed_demo.kills)}")
             print(f"  Damages found: {len(parsed_demo.damages)}")
@@ -159,7 +204,7 @@ For more information, see README.md
         extractor = FeatureExtractor(parsed_demo)
         player_features = extractor.extract_all()
         
-        if args.verbose:
+        if verbose:
             print(f"  Players analyzed: {len(player_features)}")
         
         # Filter to specific player if requested
@@ -183,7 +228,7 @@ For more information, see README.md
             mistakes = classifier.classify(features)
             classified_mistakes[player_id] = mistakes
             
-            if args.verbose:
+            if verbose:
                 print(f"  {player_id}: {len(mistakes)} issues found")
         
         # Step 4: Optional NLP phrasing
@@ -249,13 +294,13 @@ For more information, see README.md
         
     except Exception as e:
         print(f"Error analyzing demo: {e}")
-        if args.verbose:
+        if verbose:
             import traceback
             traceback.print_exc()
         return 1
 
 
-def print_parser_status():
+def print_parser_status() -> int:
     """Print status of available parsers."""
     availability = check_parser_availability()
     
@@ -270,6 +315,8 @@ def print_parser_status():
         print("\nNo parsers available. Install one:")
         print("  pip install demoparser2  # Recommended")
         print("  pip install awpy         # Alternative")
+    
+    return 0
 
 
 if __name__ == "__main__":

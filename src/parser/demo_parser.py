@@ -30,6 +30,8 @@ class ParsedDemo:
     demo_path: str
     map_name: str = ""
     match_duration: int = 0
+    tickrate: int = 64  # Default, will be read from header
+
     
     # Core DataFrames
     kills: pd.DataFrame = field(default_factory=pd.DataFrame)
@@ -115,15 +117,24 @@ class DemoParser:
         
         result = ParsedDemo(demo_path=str(self.demo_path))
         
-        # Extract map name from header (CRITICAL FIX)
+        # Extract map name and tickrate from header
         try:
             header = parser.parse_header()
             if header and "map_name" in header:
                 result.map_name = header["map_name"]
             else:
                 result.map_name = "Unknown"
+            
+            # Extract tickrate (playback_ticks / playback_time gives tickrate)
+            if header:
+                playback_ticks = header.get("playback_ticks", 0)
+                playback_time = header.get("playback_time", 0)
+                if playback_time > 0 and playback_ticks > 0:
+                    result.tickrate = int(round(playback_ticks / playback_time))
+                elif "tickrate" in header:
+                    result.tickrate = int(header["tickrate"])
         except Exception as e:
-            print(f"Warning: Could not extract map name: {e}")
+            print(f"Warning: Could not extract header info: {e}")
             result.map_name = "Unknown"
         
         # Parse kills with player data

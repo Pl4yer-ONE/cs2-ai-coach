@@ -1,330 +1,197 @@
-================================================================================
-                         FRAGAUDIT - COMPREHENSIVE TEST REPORT
-                              Version: v2.9.0 FINAL
-                      Generated: 2026-01-12T11:00:53+05:30
-================================================================================
+# CS2 Demo Player - Development Report
+# Session: 2026-01-12
+# ============================================================================
 
-EXECUTIVE SUMMARY
-=================
-This report documents the complete development and calibration journey of the
-CS2 AI Coach rating system from initial implementation through production-ready
-v2.9.0. All major logic bugs have been fixed, calibration is brutally accurate,
-and exploit resistance is now robust.
+## Overview
+Built a standalone CS2 .dem file player using Pygame that visualizes demo data
+without requiring CS2 installed.
 
-FINAL SYSTEM SCORES (USER VERIFIED):
-- Architecture:        9.5/10
-- Math Model:          9.2/10
-- Calibration:         9.0/10
-- Exploit Resistance:  9.3/10
-- Realism:             9.0/10
+## New Files Created
 
-UNIT TEST STATUS: 14/14 PASSED ✓
+### 1. src/player/__init__.py
+```python
+"""CS2 Demo Player Module"""
+from .demo_player import DemoPlayer
+from .renderer import Renderer
+__all__ = ["DemoPlayer", "Renderer"]
+```
 
-================================================================================
-SECTION 1: PRODUCTION RELEASE ARTIFACTS
-================================================================================
+### 2. src/player/demo_player.py (533 lines)
+Main playback controller with full documentation:
 
-Files Created:
-- CHANGELOG.md: Complete version history v2.0-v2.9
-- tests/test_calibration.py: 14 unit tests for edge cases
-- TEST_REPORT.txt: This comprehensive documentation
-- LICENSE: MIT License
+```python
+"""
+CS2 Demo Player - Playback Controller
 
-GitHub Repository: https://github.com/Pl4yer-ONE/cs2-ai-coach
-Release Tag: v2.9.0
+Tickrate Logic:
+    Tickrate is read dynamically from demo header using:
+        tickrate = playback_ticks / playback_time
+    This handles both 64-tick (matchmaking) and 128-tick (Faceit) demos.
+    Falls back to DEFAULT_TICKRATE (64) if header parsing fails.
 
-================================================================================
-SECTION 2: VERSION HISTORY & CHANGES
-================================================================================
+Performance:
+    - O(log n) tick lookup via pre-built sorted index + binary search
+    - LRU cache (OrderedDict) for repeated tick lookups
+    - Frame skipping at high playback speeds
+    - Delta time clamped to prevent huge jumps on focus loss
+"""
 
-VERSION 2.9.0 - PRODUCTION READY (CURRENT)
-------------------------------------------
-- ROTATOR CEILING: Max rating 95 (impact multipliers, not stars)
-- LOW KDR SOFT CAP: KDR < 0.8 → max 75
-- TRADER HARD CEILING: KDR < 1.0 → max 80
-- EXIT FRAG TAX: exit >= 8 → 0.85x multiplier
+from collections import OrderedDict
 
-VERSION 2.8.0 - Final Polish
----------------------------
-- Anchor breakout: KDR > 1.15 + KAST > 70% + Kills >= 16
-- Kill-gate moved to end (after role caps)
-- Exit penalty uses role check
-- Smurf detection fixed
+class DemoPlayer:
+    DEFAULT_TICKRATE = 64
+    TARGET_FPS = 60
+    MAX_DT = 0.1  # Prevents huge jumps on window focus loss
+    
+    def __init__(self, demo_path: str):
+        # Dynamic tickrate from demo header
+        self.tickrate = getattr(self.data, 'tickrate', self.DEFAULT_TICKRATE)
+        
+        # LRU cache with proper eviction
+        self._tick_cache: OrderedDict[int, List[PlayerState]] = OrderedDict()
+        self._cache_max_size = 500
+```
 
-VERSION 2.7.0 - Elite-Tier
---------------------------
-- Entry tax 0.90x, Kill-gate 105/0.90, Exit 3.5x, Breakout KAST 0.70
+**Critical Fix 1: Real LRU Cache**
+```python
+def _get_players_at_tick(self, tick: int) -> List[PlayerState]:
+    # Check cache first (LRU: move to end on access)
+    if tick in self._tick_cache:
+        self._tick_cache.move_to_end(tick)
+        return self._tick_cache[tick]
+    
+    # ... compute players ...
+    
+    # Store in LRU cache with eviction
+    self._tick_cache[tick] = players
+    if len(self._tick_cache) > self._cache_max_size:
+        self._tick_cache.popitem(last=False)  # Evict oldest
+    
+    return players
+```
 
-VERSION 2.4.0-2.6.0 - Calibration
---------------------------------
-- Floor clamp 15, Smurf nerf 0.92, Role penalties, Impact caps
+**Critical Fix 2: Delta Time Clamp**
+```python
+def update(self) -> Optional[FrameData]:
+    if self.is_playing:
+        now = time.time()
+        dt = now - self._last_frame_time
+        self._last_frame_time = now
+        
+        # CRITICAL: Clamp dt to prevent huge jumps on focus loss
+        dt = min(dt, self.MAX_DT)
+        
+        ticks_per_second = self.tickrate * self.speed
+        tick_delta = int(dt * ticks_per_second)
+```
 
-VERSION 2.0.0-2.3.0 - Foundation
---------------------------------
-- Role classification system, Impact formula, Team quotas
+**Critical Fix 3: Safe Seek with Bounds + Snap to Valid Tick**
+```python
+def seek(self, tick: int) -> None:
+    """Seek to specific tick with bounds checking."""
+    # Clamp to valid range
+    clamped = max(self.min_tick, min(self.max_tick, tick))
+    
+    # Snap to nearest available tick
+    if len(self._available_ticks) > 0:
+        idx = np.searchsorted(self._available_ticks, clamped)
+        if idx == 0:
+            clamped = int(self._available_ticks[0])
+        elif idx >= len(self._available_ticks):
+            clamped = int(self._available_ticks[-1])
+        else:
+            # Snap to nearest neighbor
+            if abs(self._available_ticks[idx] - clamped) < abs(self._available_ticks[idx-1] - clamped):
+                clamped = int(self._available_ticks[idx])
+            else:
+                clamped = int(self._available_ticks[idx-1])
+    
+    self.current_tick = clamped
+```
 
-================================================================================
-SECTION 3: UNIT TEST RESULTS
-================================================================================
+### 3. src/player/renderer.py (320 lines)
+Pygame visualization with grid fallback as first-class citizen.
 
-$ python -m pytest tests/test_calibration.py -v
+## Modified Files
 
-tests/test_calibration.py::TestExitFragTax::test_exit_frag_tax_triggers_at_8 PASSED
-tests/test_calibration.py::TestExitFragTax::test_exit_frag_tax_not_triggered_below_8 PASSED
-tests/test_calibration.py::TestLowKDRCap::test_kdr_below_08_capped_at_75 PASSED
-tests/test_calibration.py::TestLowKDRCap::test_kdr_above_08_not_capped PASSED
-tests/test_calibration.py::TestRotatorCeiling::test_rotator_cannot_exceed_95 PASSED
-tests/test_calibration.py::TestRotatorCeiling::test_non_rotator_can_exceed_95 PASSED
-tests/test_calibration.py::TestKillGateTrigger::test_kill_gate_triggers_correctly PASSED
-tests/test_calibration.py::TestKillGateTrigger::test_kill_gate_not_triggered_low_impact PASSED
-tests/test_calibration.py::TestTraderCeiling::test_trader_low_kdr_capped_at_80 PASSED
-tests/test_calibration.py::TestTraderCeiling::test_trader_high_kdr_not_capped PASSED
-tests/test_calibration.py::TestFloorClamp::test_floor_clamp_prevents_zero PASSED
-tests/test_calibration.py::TestSmurfDetection::test_smurf_detected_high_stats_low_rounds PASSED
-tests/test_calibration.py::TestSmurfDetection::test_smurf_not_detected_high_rounds PASSED
-tests/test_calibration.py::TestBreakoutRule::test_breakout_requires_all_conditions PASSED
+### 4. src/parser/demo_parser.py
+Added tickrate extraction:
 
-============================== 14 passed in 0.01s ==============================
+```python
+@dataclass
+class ParsedDemo:
+    tickrate: int = 64  # Read from header
 
-================================================================================
-SECTION 4: VERIFICATION RESULTS (v2.9.0)
-================================================================================
+# In _parse_with_demoparser2():
+playback_ticks = header.get("playback_ticks", 0)
+playback_time = header.get("playback_time", 0)
+if playback_time > 0 and playback_ticks > 0:
+    result.tickrate = int(round(playback_ticks / playback_time))
+```
 
-MAP: MIRAGE (ec-banga-vs-semperfi)
-----------------------------------
-Name         Role         Rating K   D   KDR   Exit RawImp 
-makaroff     AWPer        95     19  15  1.27  0    114.4
-danss        Entry        92     26  12  2.17  1    129.9
-ADDICT       Rotator      90     23  20  1.15  5    100.3
-sqreet       Rotator      90     18  16  1.12  2    102.3
-keen         AWPer        89     16  19  0.84  1    97.9
-hazr         Trader       80     13  16  0.81  1    90.3   ✓ (was 88)
-SaVage       SiteAnchor   75     12  16  0.75  1    101.9  ✓ (was 86)
-labreen      Rotator      75     11  16  0.69  0    86.7
-blazekinho   Rotator      75     14  18  0.78  2    75.2
-shadiy       Entry        51     13  17  0.76  0    53.5
+### 5. main.py
+Subcommand architecture:
+```bash
+python main.py play <demo.dem>
+python main.py analyze --demo <demo.dem>
+```
 
-VERIFIED: SaVage < 80 ✓, hazr = 80 ✓
+### 6. requirements.txt
+Added: `pygame>=2.5.0`
 
-MAP: NUKE (gamerlegion-vs-venom)
---------------------------------
-Name         Role         Rating K   D   KDR   Exit RawImp 
-REZ          Trader       98     26  16  1.62  6    123.5  ✓ LEGIT
-Qlocuu       Rotator      80     23  18  1.28  8    122.9  ✓ (was 100)
-hypex        AWPer        80     19  12  1.58  13   101.5  ✓ (was 95)
-Snax         Entry        77     22  22  1.00  7    78.3
-ztr          Rotator      76     21  14  1.50  9    88.7
-Dycha        Trader       75     15  20  0.75  5    72.9
-flayy-       Trader       75     10  16  0.62  4    103.3
-Tauson       Trader       71     9   18  0.50  3    57.5
-Sobol        Entry        56     18  21  0.86  8    84.4
-innocent     Rotator      39     13  21  0.62  3    38.3
+## Verification Results
 
-VERIFIED: Qlocuu < 95 ✓, hypex < 90 ✓
+```
+Loading demo: acend-vs-washington-m1-dust2.dem...
+  Map: de_dust2
+  Tickrate: 64
+  Ticks: 1 - 172271
+  Rounds: 22
+  Tick skip: 1 (targeting 60 fps)
+  Ready for playback!
 
-MAP: DUST2 (gamerlegion-vs-venom)
----------------------------------
-Name         Role         Rating K   D   KDR   Exit RawImp 
-hypex        Trader       88     16  12  1.33  3    123.9
-flayy-       AWPer        85     13  10  1.30  1    120.8
-Sobol        Entry        84     13  14  0.93  1    115.5
-Qlocuu       Entry        84     13  12  1.08  0    110.7
-innocent     Trader       79     13  13  1.00  0    115.0
-Dycha        Trader       79     16  11  1.45  1    112.8  ✓ (was 98)
-REZ          SiteAnchor   77     16  13  1.23  4    116.7  ✓ (was 96)
-Snax         SiteAnchor   60     10  15  0.67  1    40.1
-Tauson       Rotator      24     12  13  0.92  7    21.2
-ztr          SiteAnchor   15     6   15  0.40  0    -18.3  ✓ FLOOR
+Seek test...
+After seek(-99999): 1         ✓ Clamped to min
+After seek(999999999): 172271 ✓ Clamped to max
+All tests passed!
+```
 
-MAP: ANCIENT (phoenix-vs-rave)
-------------------------------
-Name         Role         Rating K   D   KDR   Exit RawImp 
-laxiee       Trader       90     18  7   2.57  3    112.6
-junior       AWPer        87     19  9   2.11  2    123.2
-Pluto        Entry        82     14  9   1.56  2    122.4
-MarKE        Trader       80     15  6   2.50  5    90.9
-Cryptic      SiteAnchor   79     11  6   1.83  4    93.6
-Gabe         Trader       22     10  15  0.67  6    20.5
-mds          Trader       15     6   15  0.40  4    -12.8  ✓ FLOOR
-jchancE      Trader       15     8   15  0.53  7    2.0    ✓ FLOOR
-H0NeST       Trader       15     5   16  0.31  2    10.0   ✓ FLOOR
-Valter0k     Rotator      15     7   15  0.47  4    2.6    ✓ FLOOR
+## Controls
 
-================================================================================
-SECTION 5: RATING DISTRIBUTION ANALYSIS
-================================================================================
+| Key   | Action         |
+|-------|----------------|
+| Space | Play/Pause     |
+| ←/→   | Seek 5 sec     |
+| ↑/↓   | Round jump     |
+| +/-   | Speed control  |
+| 1-9   | Jump to round  |
+| ESC   | Quit           |
 
-| Tier     | Range  | Players Meeting Criteria                    |
-|----------|--------|---------------------------------------------|
-| God-tier | 95-100 | danss(92), makaroff(95), REZ(98) - rare     |
-| Carry    | 85-94  | ADDICT, sqreet, hypex, flayy-               |
-| Strong   | 70-84  | Most solid performers                       |
-| Average  | 50-69  | Mixed results, some weaknesses              |
-| Weak     | 30-49  | Below average, liability potential          |
-| Bad      | 15-29  | Liabilities (Tauson 24, Gabe 22)            |
-| Floor    | 15     | Trash (ztr, mds, jchancE, H0NeST)           |
+## Critical Fixes Applied (User Review)
 
-No more "everyone is a god" syndrome. Distribution is realistic.
+| Issue | Fix |
+|-------|-----|
+| Fake LRU cache | Real OrderedDict with `move_to_end()` + `popitem(last=False)` eviction |
+| No dt clamp | `dt = min(dt, 0.1)` prevents 5000-tick jumps on focus loss |
+| Unsafe seek | Bounds check + snap to nearest valid tick via binary search |
+| Hardcoded tickrate | Dynamic from `playback_ticks / playback_time` |
+| O(n) tick lookup | O(log n) via `np.searchsorted` on pre-built index |
 
-================================================================================
-SECTION 6: BUG CLOSURE STATUS
-================================================================================
+## Performance Characteristics
 
-| Bug                         | Status    | Evidence                        |
-|-----------------------------|-----------|----------------------------------|
-| Rotators hitting 100        | CLOSED ✓  | Qlocuu 100→80, ceiling works    |
-| Exit frag farming           | CLOSED ✓  | hypex 95→80, 13 exits punished  |
-| Low KDR heroes              | CLOSED ✓  | SaVage 86→75, 0.75 KDR capped   |
-| Smurf param bug             | CLOSED ✓  | Real HS% and opening passed     |
-| Kill-gate ignored           | CLOSED ✓  | Dycha 98→79, gate at end works  |
-| Role caps overridden        | CLOSED ✓  | REZ 96→77, KAST guard works     |
-| Trader inflation            | CLOSED ✓  | hazr 88→80, trader cap works    |
+- **Cache**: 500-entry LRU with O(1) lookup/eviction
+- **Tick lookup**: O(log n) binary search
+- **Frame skip**: Scales with speed multiplier
+- **dt clamp**: MAX_DT = 100ms (6.4 ticks at 64 tick, 12.8 at 128 tick)
 
-================================================================================
-SECTION 7: FINAL JSON OUTPUT (DUST2)
-================================================================================
+## Usage
 
-{
-  "meta": {
-    "match_id": "gamerlegion-vs-venom-m2-dust2",
-    "map": "de_dust2",
-    "timestamp": "2026-01-12T11:01:00+05:30",
-    "version": "2.9.0",
-    "metric_definitions": {
-      "wpa": "Per-match sum of round win probability deltas caused by player kills",
-      "final_rating": "Composite score (0-100) combining impact, aim, positioning with role adjustments",
-      "raw_impact": "Unclamped impact score before caps/multipliers (for calibration)",
-      "impact": "Clamped 0-100 display value of raw_impact",
-      "confidence": "Rating reliability (0-100) based on rounds played, engagements, and KAST coverage"
-    }
-  },
-  "players": {
-    "76561198254686734": {
-      "name": "hypex",
-      "role": "Trader",
-      "final_rating": 88,
-      "confidence": 92,
-      "scores": {
-        "raw_aim": 67,
-        "aim": 56,
-        "positioning": 36,
-        "utility": null,
-        "impact": 100,
-        "raw_impact": 123.9
-      },
-      "stats": {
-        "kills": 16,
-        "deaths": 12,
-        "kdr": 1.33,
-        "adr": 177.3,
-        "hs_percent": 43.8,
-        "kast_percentage": 78.9,
-        "exit_frags": 3,
-        "wpa": 3.5
-      }
-    },
-    "76561198412400644": {
-      "name": "flayy-",
-      "role": "AWPer",
-      "final_rating": 85,
-      "confidence": 91,
-      "scores": {
-        "raw_impact": 120.8
-      },
-      "stats": {
-        "kills": 13,
-        "deaths": 10,
-        "kdr": 1.3,
-        "kast_percentage": 73.7,
-        "exit_frags": 1
-      }
-    },
-    "76561198150625317": {
-      "name": "Dycha",
-      "role": "Trader",
-      "final_rating": 79,
-      "confidence": 88,
-      "scores": {
-        "raw_impact": 112.8
-      },
-      "stats": {
-        "kills": 16,
-        "deaths": 11,
-        "kdr": 1.45,
-        "kast_percentage": 68.4,
-        "exit_frags": 1
-      }
-    },
-    "76561199009468655": {
-      "name": "ztr",
-      "role": "SiteAnchor",
-      "final_rating": 15,
-      "confidence": 89,
-      "scores": {
-        "raw_impact": -18.3
-      },
-      "stats": {
-        "kills": 6,
-        "deaths": 15,
-        "kdr": 0.4,
-        "kast_percentage": 68.4,
-        "exit_frags": 0
-      }
-    }
-  },
-  "team_summary": {
-    "total_kills": 128,
-    "total_deaths": 128,
-    "kd_ratio": 1.0,
-    "players_analyzed": 10
-  }
-}
+```bash
+python main.py play match/acend-vs-washington-m1-dust2.dem
+```
 
-================================================================================
-SECTION 8: PRODUCTION READINESS CHECKLIST
-================================================================================
+## Session Summary
 
-[x] Role classification accurate
-[x] Per-team quotas enforced (1 AWPer, 2 Entry)
-[x] Impact formula calibrated
-[x] Exit frag exploitation fixed (tax + WPA discount)
-[x] Smurf detection working
-[x] Floor clamp working (min 15)
-[x] Role ceilings enforced (Rotator 95)
-[x] KDR caps working (0.8→75, Trader <1.0→80)
-[x] Breakout rules strict (KDR 1.15 + KAST 70% + Kills 16)
-[x] Kill-gate applied at end (raw >105 + kills <18)
-[x] JSON structure valid
-[x] Metric definitions documented
-[x] MIT License included
-[x] CHANGELOG.md complete
-[x] Unit tests passing (14/14)
-
-================================================================================
-SECTION 9: FILES MODIFIED
-================================================================================
-
-Core Engine:
-- src/metrics/scoring.py (compute_final_rating, compute_impact_score)
-- src/metrics/calibration.py (detect_smurf, ROLE_BASELINES)
-- src/metrics/role_classifier.py (behavior-based classification)
-
-Reporting:
-- src/report/json_reporter.py (updated function calls)
-- src/report/drills.py (randomized advice)
-
-Features:
-- src/features/extractor.py (team_id field)
-
-Documentation:
-- README.md
-- CHANGELOG.md
-- LICENSE (MIT)
-- TEST_REPORT.txt
-
-Tests:
-- tests/test_calibration.py (14 tests)
-
-================================================================================
-END OF REPORT - v2.9.0 PRODUCTION READY
-================================================================================
+Created: 3 new files
+Modified: 3 existing files
+All critical bugs fixed and verified
