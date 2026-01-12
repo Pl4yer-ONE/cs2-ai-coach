@@ -496,10 +496,11 @@ class FeatureExtractor:
                      name = grp['attacker_name'].dropna().iloc[0] if not grp['attacker_name'].dropna().empty else ""
                      if name: player.player_name = str(name)
                 
-                # Weapon stats
+                # Weapon stats (case-insensitive)
                 if 'weapon' in grp.columns:
-                    player.awp_kills = len(grp[grp['weapon'] == 'awp'])
-                    player.rifle_kills = len(grp[grp['weapon'].isin(['ak47', 'm4a1', 'm4a1_silencer'])])
+                    weapon_lower = grp['weapon'].str.lower()
+                    player.awp_kills = len(grp[weapon_lower == 'awp'])
+                    player.rifle_kills = len(grp[weapon_lower.isin(['ak47', 'm4a1', 'm4a1_silencer'])])
 
         if vic_col:
             for pid, grp in kills_df.groupby(vic_col):

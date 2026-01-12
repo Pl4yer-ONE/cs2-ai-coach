@@ -11,7 +11,7 @@ from datetime import datetime
 from src.features.extractor import PlayerFeatures
 from src.classifier.mistake_classifier import ClassifiedMistake
 from src.metrics.scoring import ScoreEngine
-from src.report.drills import get_drills_for_mistake
+from src.report.drills import get_drills_for_mistake, get_random_advice
 
 # API Version - keep in sync with README and repo tags
 VERSION = "2.1.0"
@@ -179,7 +179,7 @@ class JsonReporter:
             map_name  # Map for difficulty weighting
         )
         
-        # Process mistakes with severity weighting
+        # Process mistakes with severity weighting and randomized advice
         processed_mistakes = []
         for m in mistakes:
             processed_mistakes.append({
@@ -187,7 +187,7 @@ class JsonReporter:
                 "round": m.round_num,
                 "type": m.mistake_type,
                 "description": m.details,
-                "advice": m.correction,
+                "advice": get_random_advice(m.mistake_type),  # Randomized to avoid repetition
                 "severity": m.severity,
                 "drills": get_drills_for_mistake(m.mistake_type)
             })

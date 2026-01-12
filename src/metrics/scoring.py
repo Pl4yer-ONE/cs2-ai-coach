@@ -231,7 +231,11 @@ class ScoreEngine:
         
         # 7. WPA BONUS (Win Probability Added)
         # 1.0 WPA = 15.0 pts (1 full round win contrib = high value)
-        wpa_bonus = total_wpa * 15.0
+        # DIMINISHING RETURNS: WPA > 2.5 gets halved
+        effective_wpa = total_wpa
+        if total_wpa > 2.5:
+            effective_wpa = 2.5 + (total_wpa - 2.5) * 0.5
+        wpa_bonus = effective_wpa * 15.0
         
         # 8. EXIT FRAG WPA DISCOUNT
         # Exit frags are low-value kills, reduce their WPA contribution
@@ -241,6 +245,10 @@ class ScoreEngine:
         
         # Sum raw impact (BEFORE any caps/penalties)
         raw_before_caps = kill_points + entry_points + clutch_points + round_bonus + swing_bonus + wpa_bonus - death_penalty
+        
+        # SOFT CAP: Prevent explosion above 120 to preserve resolution
+        if raw_before_caps > 120:
+            raw_before_caps = 120 + (raw_before_caps - 120) * 0.3
         
         # Store true raw for calibration
         true_raw = raw_before_caps
