@@ -177,7 +177,9 @@ class JsonReporter:
             survival_rate,
             p.entry_kills,  # Opening kills
             p.kast_percentage,  # KAST%
-            map_name  # Map for difficulty weighting
+            map_name,  # Map for difficulty weighting
+            p.kills,  # NEW: for low kill cap
+            p.rounds_played  # NEW: real rounds for smurf detection
         )
         
         # Process mistakes with severity weighting and randomized advice

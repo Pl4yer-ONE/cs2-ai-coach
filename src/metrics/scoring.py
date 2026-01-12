@@ -242,11 +242,9 @@ class ScoreEngine:
         # REDUCED for Rotator/Trader - they naturally rotate late
         if exit_frags > 3:
             exit_discount = (exit_frags - 3) * 2.0  # Each exit frag over 3 = -2 pts
-            # Role-aware: Rotators/Traders get 50% reduced penalty
-            # (role passed via detected_role in player features, but not available here
-            #  so we use a heuristic: high swing_score = likely rotator)
+            # Role-aware: Rotators get 60% reduced penalty (0.4x)
             if swing_score > 5:  # Rotators have high swing kills
-                exit_discount *= 0.5
+                exit_discount *= 0.4  # NERFED from 0.5
             wpa_bonus = max(0, wpa_bonus - exit_discount)
         
         # Sum raw impact (BEFORE any caps/penalties)
@@ -291,7 +289,8 @@ class ScoreEngine:
     @staticmethod
     def compute_final_rating(scores: Dict[str, int], role: str, kdr: float, untradeable_deaths: int,
                              survival_rate: float = 0.0, opening_kills: int = 0, 
-                             kast_percentage: float = 0.5, map_name: str = "") -> int:
+                             kast_percentage: float = 0.5, map_name: str = "",
+                             kills: int = 0, rounds_played: int = 20) -> int:
         """
         Compute final rating with brutal calibration.
         
@@ -341,25 +340,32 @@ class ScoreEngine:
         elif role == "Anchor" and kdr < 0.6:
             rating *= 0.80  # Anchor feeding is worst
         
+        # 5b. TRADER CEILING: Mid-KDR traders shouldn't hit 98
+        if role == "Trader" and kdr < 1.2:
+            rating *= 0.90
+        
         # 6. Dynamic role cap (map-aware)
         role_cap = get_dynamic_role_cap(role, map_name)
         
         # 7. ANCHOR BREAKOUT RULE: Don't suppress legit carries
-        # If raw_impact exceeds role_cap by 15+, allow breakout
+        # GUARDED: require KDR > 1.1 to prevent inflated ratings
         if role in ("Anchor", "Rotator", "SiteAnchor", "Trader") and raw_impact > role_cap + 15:
-            role_cap += 10  # Allow breakout to cap+10
+            if kdr > 1.1:  # Must have positive KDR to break out
+                role_cap += 10
         
         rating = min(rating, role_cap)
         
         # 8. SMURF DETECTION: Penalize suspicious stat-padding
-        # NERFED: 0.92 multiplier, disabled if rounds > 18
-        rounds_played = int(1 / max(0.01, survival_rate) * opening_kills) if survival_rate > 0 else 20
+        # FIXED: Use REAL rounds_played from parameters
         is_smurf, smurf_mult = detect_smurf(kdr, raw_impact, rounds_played=rounds_played)
         if is_smurf:
-            rating *= smurf_mult  # Apply 0.92x penalty (was 0.85)
+            rating *= smurf_mult  # Apply 0.92x penalty
         
-        # 9. FLOOR CLAMP: No human is 0
-        # Even silvers get 15
+        # 9. LOW KILL CAP: Can't be 98 with 10 kills
+        if kills < 12:
+            rating = min(rating, 75)
+        
+        # 10. FLOOR CLAMP: No human is 0
         rating = max(15, rating)
         
         # Clamp 0-100
