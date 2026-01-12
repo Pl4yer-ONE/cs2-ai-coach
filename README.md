@@ -1,310 +1,220 @@
-<div align="center">
+# CS2 AI Coach
 
-# 🎮 CS2 AI Coach
-
-### Pro-Grade Performance Analytics for Counter-Strike 2
-
-[![Version](https://img.shields.io/badge/version-v2.1.0-brightgreen.svg)](https://github.com/Pl4yer-ONE/cs2-ai-coach/releases/tag/v2.1.0)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![HLTV Alignment](https://img.shields.io/badge/HLTV%20Alignment-80%25-success.svg)](#validation-results)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](#testing)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-2.9.0-orange.svg)](CHANGELOG.md)
+[![Tests](https://img.shields.io/badge/tests-14%2F14%20passing-brightgreen.svg)](tests/)
 
-**Parse demos → Extract features → Detect roles → Calibrate ratings → Expose frauds**
+Advanced performance analytics engine for Counter-Strike 2 demo files. Provides production-grade player ratings, role classification, and coaching feedback through deep statistical analysis.
 
-[Quick Start](#-quick-start) •
-[Features](#-features) •
-[Rating System](#-rating-system) •
-[API Reference](#-api-reference) •
-[Contributing](#-contributing)
+## Features
 
----
+- **Role Classification** — Automatic detection of player roles (AWPer, Entry, Trader, Rotator, Anchor) using behavioral analysis
+- **Impact Rating** — Composite 0-100 score combining kills, entries, clutches, WPA, and death context
+- **Exploit Resistance** — Calibrated penalties for exit farming, low KDR inflation, and stat padding
+- **Coaching Feedback** — Mistake detection with actionable drill recommendations
+- **Heatmap Generation** — Visual position analysis per player and phase
 
-### 🚀 v2.1.0 Release — Public Beta
-
-✅ **80% HLTV Top-3 MVP Alignment** — Validated against pro matches  
-✅ **Win Probability Added (WPA)** — Moneyball-style impact metric  
-✅ **Per-Team Role Quotas** — Realistic 1 AWP, 2 Entry per team  
-✅ **Confidence Scores** — Know when ratings are reliable  
-✅ **Production-Grade API** — Clean JSON, documented metrics  
-
-</div>
-
----
-
-## ✨ Features
-
-| Feature | Description |
-|---------|-------------|
-| 🔍 **Demo Parsing** | Parse CS2 `.dem` files with full round context |
-| 📊 **Win Probability Added** | Moneyball metric — delta win prob per kill |
-| 🎯 **Auto Role Detection** | Entry, Anchor, AWPer, Support, Lurker (per-team quotas) |
-| ⚡ **Swing Kills** | Track momentum-shifting kills (man-advantage flips) |
-| 🧮 **Z-Score Rating** | Role-based normalization with brutal calibration |
-| 🚨 **Exploit Resistance** | Death tax, exit frag discount, smurf detection |
-| 📈 **Confidence Metric** | Know when you have enough data |
-| 🗺️ **Heatmaps** | Visual death/kill positioning |
-
----
-
-## 🚀 Quick Start
-
-### Installation
+## Installation
 
 ```bash
+# Clone repository
 git clone https://github.com/Pl4yer-ONE/cs2-ai-coach.git
 cd cs2-ai-coach
-python3 -m venv venv
+
+# Create virtual environment
+python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### Analyze Demos
+## Quick Start
 
 ```bash
-# Single demo
-python -m src.main your_match.dem --output outputs/
+# Analyze a single demo
+python -m src.main path/to/demo.dem --output ./output
 
-# Batch analyze folder
-python -m src.main /path/to/demos/ --output outputs/batch
+# Batch process multiple demos
+python -m src.main path/to/demos/ --output ./output
 ```
 
-### Generate Leaderboard
+## Output Structure
 
-```bash
-python leaderboard.py outputs/batch
+```
+output/
+├── demo-name/
+│   ├── reports/
+│   │   └── match_report_demo-name.json
+│   └── heatmaps/
+│       └── map-name/
+│           ├── kills_player.png
+│           └── deaths_player.png
 ```
 
----
+## Rating System
 
-## 📈 Rating System
+### Score Bands
 
-### Pipeline
-```
-raw_impact → role_zscore → map_weight → kast_bonus → penalties → role_cap
-```
+| Rating | Classification |
+|--------|----------------|
+| 95-100 | Elite (rare) |
+| 85-94 | Carry |
+| 70-84 | Strong |
+| 50-69 | Average |
+| 30-49 | Below Average |
+| 15-29 | Liability |
 
-### Impact Formula
+### Role Caps
 
-| Component | Formula | Purpose |
-|-----------|---------|---------|
-| Kill Value | `won_round * 8 + lost_round * 0.5` | Context matters |
-| Entry Points | `opening_won * 14 + opening_lost * 1` | First bloods valued |
-| Clutch Points | `1v1 * 15 + 1vN * 35` | Hero plays rewarded |
-| **WPA Bonus** | `total_wpa * 15` (diminishing >2.5) | Round swing impact |
-| Swing Kills | `swing_score * 1.0` | Momentum shifts |
-| Death Penalty | `tradeable * 0.5 + untradeable * 4` | Punish feeding |
+| Role | Maximum Rating | Notes |
+|------|---------------|-------|
+| AWPer | 95 | Requires positive KDR |
+| Entry | 92 | Dying is expected |
+| Trader | 88 | Support role ceiling |
+| Rotator | 95 | Impact multiplier ceiling |
+| Anchor | 85 | Requires breakout conditions |
 
-### Anti-Exploit Features
+### Calibration Rules
 
-| Feature | Implementation |
-|---------|----------------|
-| **Multiplicative Death Tax** | 18+ deaths = -20%, 21+ = -40%, 24+ = -50% |
-| **Exit Frag Discount** | >3 exit frags = -2 WPA per extra |
-| **Raw Impact Soft Cap** | >120 gets 0.3x excess |
-| **WPA Diminishing Returns** | >2.5 WPA gets 0.5x excess |
-| **Per-Team Role Quotas** | Max 1 AWP, 2 Entry per team |
+- **Kill Gate**: raw_impact > 105 with < 18 kills receives 0.90x penalty
+- **Exit Tax**: 8+ exit frags receives 0.85x penalty
+- **KDR Cap**: KDR < 0.8 capped at 75, Trader < 1.0 capped at 80
+- **Breakout**: Requires KDR > 1.15, KAST > 70%, Kills >= 16
+- **Floor**: Minimum rating of 15 (no zeros)
 
-### Role Baselines
-
-| Role | Mean | Std | Max Cap |
-|------|------|-----|---------|
-| AWPer | 46.4 | 22.3 | 95 |
-| Entry | 42.6 | 22.6 | 92 |
-| Anchor | 28.6 | 24.1 | 88 |
-
----
-
-## 📊 Sample Output
-
-### JSON Report Structure
+## JSON Output Schema
 
 ```json
 {
   "meta": {
-    "version": "2.1.0",
-    "metric_definitions": {
-      "wpa": "Per-match sum of round win probability deltas",
-      "final_rating": "Composite score (0-100) with role adjustments",
-      "confidence": "Rating reliability (0-100) based on sample size"
-    }
+    "match_id": "string",
+    "map": "string",
+    "version": "2.9.0",
+    "metric_definitions": { ... }
   },
   "players": {
-    "76561198xxx": {
-      "name": "hypex",
-      "role": "AWPer",
-      "final_rating": 95,
-      "confidence": 93,
+    "steam_id": {
+      "name": "string",
+      "role": "AWPer|Entry|Trader|Rotator|SiteAnchor",
+      "final_rating": 0-100,
+      "confidence": 0-100,
       "scores": {
-        "impact": 100,
-        "raw_impact": 129.9,
-        "aim": 88,
-        "positioning": 45
+        "aim": 0-100,
+        "positioning": 0-100,
+        "impact": 0-100,
+        "raw_impact": "float (uncapped)"
       },
-      "stats": {
-        "kills": 27,
-        "deaths": 16,
-        "wpa": 5.62,
-        "kast_percentage": 82.5
-      }
+      "stats": { ... },
+      "mistakes": [ ... ]
     }
-  }
+  },
+  "team_summary": { ... }
 }
 ```
 
-### Leaderboard Example
+## API Reference
 
+### ScoreEngine
+
+```python
+from src.metrics.scoring import ScoreEngine
+
+# Compute aim score
+raw_aim, effective_aim = ScoreEngine.compute_aim_score(
+    hs_percent=0.45,
+    kpr=0.8,
+    adr=85.0,
+    counter_strafe=80.0
+)
+
+# Compute final rating
+rating = ScoreEngine.compute_final_rating(
+    scores={"raw_impact": 100},
+    role="Entry",
+    kdr=1.2,
+    untradeable_deaths=5,
+    kills=18,
+    rounds_played=20,
+    kast_percentage=0.7
+)
 ```
-=== TOP 10 PLAYERS ===
-name          role     rating  wpa    confidence
-hypex         AWPer    95      13.88  93
-Dycha         Entry    88      9.75   91
-REZ           Anchor   88      7.13   93
-MarKE         Entry    85      6.47   89
-Qlocuu        Anchor   81      11.41  92
+
+### RoleClassifier
+
+```python
+from src.metrics.role_classifier import RoleClassifier
+
+classifier = RoleClassifier()
+player_features = classifier.classify_roles(player_features_dict)
 ```
 
----
+## Testing
 
-## 🔬 Validation Results
+```bash
+# Run all tests
+python -m pytest tests/ -v
 
-### HLTV Cross-Validation (13 Matches)
+# Run calibration tests only
+python -m pytest tests/test_calibration.py -v
+```
 
-| Metric | Result | Target |
-|--------|--------|--------|
-| Exact #1 Match | 20% | — |
-| Top-2 Capture | 60% | 70% |
-| **Top-3 Capture** | **80%** | 70% ✅ |
+### Test Coverage
 
-### Stress Test Results
+- Exit frag tax trigger (>= 8 frags)
+- Low KDR cap (< 0.8)
+- Rotator ceiling (max 95)
+- Kill-gate trigger (raw > 105, kills < 18)
+- Trader ceiling (KDR < 1.0)
+- Floor clamp (min 15)
+- Smurf detection
+- Breakout rule validation
 
-| Test | Status |
-|------|--------|
-| Exit Frag Penalty | ✅ Pass |
-| Death Tax Working | ✅ Pass |
-| Impact Clamping | ✅ Pass |
-| WPA Diminishing | ✅ Pass |
-| Role Quotas | ✅ Pass |
-| Advice Randomization | ✅ Pass |
-| Confidence Metric | ✅ Pass |
-
----
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 cs2-ai-coach/
 ├── src/
-│   ├── parser/              # Demo parsing (demoparser2)
-│   ├── features/            # Feature extraction + WPA
-│   │   └── extractor.py     # WinProbabilityModel
+│   ├── main.py              # Entry point
+│   ├── features/
+│   │   └── extractor.py     # Demo parsing
 │   ├── metrics/
-│   │   ├── scoring.py       # Impact + rating calculation
-│   │   ├── calibration.py   # Role baselines, map weights
-│   │   └── role_classifier.py # Per-team role detection
-│   ├── classifier/          # Mistake detection
+│   │   ├── scoring.py       # Rating engine
+│   │   ├── calibration.py   # Baselines and caps
+│   │   └── role_classifier.py
 │   └── report/
-│       ├── json_reporter.py # JSON output + confidence
-│       └── drills.py        # Randomized advice
-├── leaderboard.py           # Aggregated ranking tool
-├── TEST_REPORT.txt          # Full validation report
-└── requirements.txt
+│       ├── json_reporter.py # Output generation
+│       ├── drills.py        # Coaching recommendations
+│       └── heatmaps.py
+├── tests/
+│   └── test_calibration.py
+├── CHANGELOG.md
+├── LICENSE
+└── README.md
 ```
 
----
+## Requirements
 
-## 📖 API Reference
+- Python 3.10+
+- demoparser2
+- numpy
+- matplotlib
+- seaborn
 
-### Key Metrics
-
-| Metric | Type | Description |
-|--------|------|-------------|
-| `final_rating` | `int (0-100)` | Composite score with role adjustments |
-| `confidence` | `int (0-100)` | Rating reliability based on sample size |
-| `wpa` | `float` | Win Probability Added (per-match sum) |
-| `raw_impact` | `float` | Unclamped impact for calibration |
-| `kast_percentage` | `float` | Kill/Assist/Survived/Traded % |
-
-### Role Detection Rules
-
-| Role | Criteria |
-|------|----------|
-| AWPer | AWP kills ≥25% of total AND ≥2 AWP kills |
-| Entry | Top 4 entry attempts AND (success ≥25% OR ≥2 entry kills) |
-| Support | Flash thrown >1.2x team average AND ≥3 flashes |
-| Lurker | Avg teammate distance >800 units |
-| Anchor | Default (plays for trades) |
-
-### Per-Team Quotas
-
-- **Max AWPers per team**: 1
-- **Max Entries per team**: 2
-- Excess demoted to Anchor by qualification score
-
----
-
-## 🛠️ Configuration
-
-Edit `src/metrics/calibration.py`:
-
-```python
-ROLE_BASELINES = {
-    'Entry':  {'mean': 42.6, 'std': 22.6, 'max': 92},
-    'Anchor': {'mean': 28.6, 'std': 24.1, 'max': 88},
-    'AWPer':  {'mean': 46.4, 'std': 22.3, 'max': 95},
-}
-
-MAP_WEIGHTS = {
-    'de_nuke': {'Entry': 0.85, 'Anchor': 1.15, 'AWPer': 1.00},
-    'de_dust2': {'Entry': 1.10, 'Anchor': 0.95, 'AWPer': 1.05},
-}
-```
-
----
-
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
+2. Create a feature branch (`git checkout -b feature/improvement`)
+3. Commit changes (`git commit -am 'Add improvement'`)
+4. Push to branch (`git push origin feature/improvement`)
 5. Open a Pull Request
 
-### Development
+## License
 
-```bash
-# Run tests
-pytest tests/
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
 
-# Analyze single demo
-python -m src.main demo.dem --output outputs/
-```
+## Acknowledgments
 
----
-
-## 📜 Credits
-
-- [demoparser2](https://github.com/LaihoE/demoparser) — Fast CS2 demo parsing
-- Inspired by HLTV rating methodology and Moneyball analytics
-
----
-
-## 📄 License
-
-MIT License — see [LICENSE](LICENSE) for details.
-
----
-
-<div align="center">
-
-### ⭐ Star this repo if you find it useful!
-
-**This is not a toy. This is pro-grade analytics.**
-
-Made for serious competitive play 🎯
-
----
-
-*v2.1.0 — Public Beta — HLTV Validated*
-
-</div>
+- [demoparser2](https://github.com/LaihoE/demoparser) for CS2 demo parsing
+- Community feedback for calibration improvements
