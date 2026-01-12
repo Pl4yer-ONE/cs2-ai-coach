@@ -5,7 +5,7 @@
 ### CS2 Performance Verification Engine
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License: PolyForm NC](https://img.shields.io/badge/License-PolyForm%20NC-red.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-3.0.0-orange.svg)](CHANGELOG.md)
 [![CI](https://github.com/Pl4yer-ONE/FragAudit/actions/workflows/ci.yml/badge.svg)](https://github.com/Pl4yer-ONE/FragAudit/actions)
 
@@ -206,7 +206,18 @@ python -m pytest tests/ -v
 
 ## License
 
-MIT License. See [LICENSE](LICENSE).
+This project is licensed under **PolyForm Noncommercial 1.0.0**.
+
+**Commercial use is NOT permitted** without explicit written permission.
+
+If you want to:
+- Use this in a paid product
+- Integrate into SaaS
+- Monetize in any way
+
+**You MUST contact the maintainer first.**
+
+See [LICENSE](LICENSE) for full terms.
 
 ---
 
@@ -214,6 +225,6 @@ MIT License. See [LICENSE](LICENSE).
 
 **FragAudit** — *Where every frag gets audited.*
 
-*v3.0.0 — Demo Player Edition*
+*v3.0.1 — License Lockdown*
 
 </div>

@@ -1,39 +1,36 @@
 # Contributing to FragAudit
 
-Thank you for your interest in contributing to CS2 AI Coach.
+## License
 
-## Development Setup
+This project uses **PolyForm Noncommercial License**.
 
-1. Fork and clone the repository
-2. Create a virtual environment: `python -m venv venv`
-3. Activate: `source venv/bin/activate`
-4. Install dependencies: `pip install -r requirements.txt`
-5. Run tests: `python -m pytest tests/ -v`
+Commercial usage is **forbidden** without explicit written permission.
 
-## Code Standards
+## Pull Request Rules
 
-- Follow PEP 8 style guidelines
-- Add type hints for function signatures
-- Write docstrings for public methods
-- Include unit tests for new features
+PRs that introduce any of the following will be **rejected**:
 
-## Pull Request Process
+- ❌ Paywalls
+- ❌ Telemetry / tracking
+- ❌ Licensing bypass
+- ❌ Monetization features
+- ❌ Ads or sponsorship integration
 
-1. Create a feature branch from `main`
-2. Make your changes with clear commit messages
-3. Ensure all tests pass
-4. Update documentation if needed
-5. Submit PR with description of changes
+## Accepted Contributions
 
-## Reporting Issues
+- ✅ Bug fixes
+- ✅ Performance improvements
+- ✅ Documentation
+- ✅ Test coverage
+- ✅ Roadmap features (v3.1, v3.2)
 
-- Use GitHub Issues for bug reports
-- Include demo file (if applicable) and expected vs actual behavior
-- Provide Python version and OS information
+## Before Submitting
 
-## Rating System Changes
+1. Run tests: `python -m pytest tests/ -v`
+2. Check syntax: `python -m py_compile main.py`
+3. Follow existing code style
+4. Update CHANGELOG if adding features
 
-Changes to the calibration system require:
-- Justification with real demo data
-- Before/after comparison for affected players
-- Unit tests for new penalty/cap logic
+## Contact
+
+For commercial licensing inquiries, contact the maintainer.
