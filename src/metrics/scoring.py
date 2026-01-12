@@ -332,17 +332,31 @@ class ScoreEngine:
         kast_adjustment = get_kast_bonus(kast_percentage)
         rating += kast_adjustment
         
-        # 5. Role-specific penalties
-        if role == "Entry" and kdr < 0.7:
-            rating *= 0.90  # Light penalty, dying is their job
-        elif role == "AWPer" and kdr < 0.8:
-            rating *= 0.85  # Feeding as AWP is expensive
+        # 5. Role-specific penalties (FINAL CALIBRATION)
+        if role == "Entry":
+            if kdr < 0.7:
+                rating *= 0.90  # Heavy penalty
+            elif kdr < 1.0:
+                rating *= 0.93  # Dying tax - entries should still frag
+        elif role == "AWPer":
+            if kdr < 0.8:
+                rating *= 0.85  # Feeding as AWP is expensive
+            elif kdr < 0.9:
+                rating *= 0.88  # Still too many deaths for AWP
         elif role == "Anchor" and kdr < 0.6:
             rating *= 0.80  # Anchor feeding is worst
         
         # 5b. TRADER CEILING: Mid-KDR traders shouldn't hit 98
         if role == "Trader" and kdr < 1.2:
             rating *= 0.90
+        
+        # 5c. ROTATOR INFLATION GUARD: Must have real impact
+        if role == "Rotator" and raw_impact < 100:
+            rating *= 0.95
+        
+        # 5d. KILL-GATED GOD RATING: Can't be 98 with mediocre kills
+        if raw_impact > 110 and kills < 18:
+            rating *= 0.95
         
         # 6. Dynamic role cap (map-aware)
         role_cap = get_dynamic_role_cap(role, map_name)

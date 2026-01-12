@@ -75,6 +75,7 @@ class JsonReporter:
                     "wpa": "Per-match sum of round win probability deltas caused by player kills",
                     "final_rating": "Composite score (0-100) combining impact, aim, positioning with role adjustments",
                     "raw_impact": "Unclamped impact score before caps/multipliers (for calibration)",
+                    "impact": "Clamped 0-100 display value of raw_impact",
                     "confidence": "Rating reliability (0-100) based on rounds played, engagements, and KAST coverage"
                 }
             },
