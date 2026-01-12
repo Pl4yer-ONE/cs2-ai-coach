@@ -1,6 +1,6 @@
 """
 Role Classifier
-Strict rule-based role detection with team quotas.
+Strict rule-based role detection with per-team quotas.
 
 Entry = intentionally takes first fights AND has success
 Anchor = plays for trades/late round
@@ -12,20 +12,21 @@ Lurker = plays alone
 from typing import Dict, Any, List, Tuple
 
 # Role quotas per team (realistic constraints)
-MAX_AWPERS = 2
-MAX_ENTRIES = 3
+# Standard CS: 1 AWPer per team, 1-2 entries per team
+MAX_AWPERS_PER_TEAM = 1
+MAX_ENTRIES_PER_TEAM = 2
 
 class RoleClassifier:
     """
     Assigns roles based on deterministic player stats.
     
     IMPROVED LOGIC:
-    1. AWP Kills > 25% of total -> AWPer (max 2 per team)
+    1. AWP Kills > 25% of total -> AWPer (max 1 per team)
     2. Entry role requires BOTH:
        - High entry attempts (top 4 in lobby)
        - Entry success rate > 25% (not just dying first)
        OR entry_kills >= 2 (proven opener)
-       Max 3 entries per team
+       Max 2 entries per team
     3. Utility Usage > Team Avg -> Support
     4. Avg Distance from Team > Threshold -> Lurker
     5. Default -> Anchor (plays for trades)
@@ -101,27 +102,35 @@ class RoleClassifier:
                 
             role_candidates[pid] = (role, score)
         
-        # PHASE 2: Enforce team quotas
-        # Split by team (assume 5v5 split by player index for now)
-        # In reality, you'd use team_id from demo
+        # PHASE 2: Enforce per-team quotas
+        # Split players into two teams (first 5 vs second 5 by dict order)
+        # In CS2 demos, players are typically grouped by team
         all_pids = list(players.keys())
+        team_size = len(all_pids) // 2
         
-        # Get all AWPers and Entries, sorted by score
-        awpers = [(pid, score) for pid, (role, score) in role_candidates.items() if role == "AWPer"]
-        entries = [(pid, score) for pid, (role, score) in role_candidates.items() if role == "Entry"]
+        team1_pids = set(all_pids[:team_size])
+        team2_pids = set(all_pids[team_size:])
         
-        awpers.sort(key=lambda x: x[1], reverse=True)
-        entries.sort(key=lambda x: x[1], reverse=True)
+        def apply_quota_per_team(role_name: str, max_per_team: int, team_pids: set):
+            """Demote excess role holders in a single team."""
+            candidates = [(pid, score) for pid, (role, score) in role_candidates.items() 
+                         if role == role_name and pid in team_pids]
+            
+            if len(candidates) <= max_per_team:
+                return
+            
+            # Sort by qualification score descending
+            candidates.sort(key=lambda x: x[1], reverse=True)
+            
+            # Demote weakest extras
+            for pid, _ in candidates[max_per_team:]:
+                role_candidates[pid] = ("Anchor", 0)
         
-        # Demote excess AWPers (keep top MAX_AWPERS)
-        if len(awpers) > MAX_AWPERS:
-            for pid, _ in awpers[MAX_AWPERS:]:
-                role_candidates[pid] = ("Anchor", 0)  # Demote to Anchor
-        
-        # Demote excess Entries (keep top MAX_ENTRIES)
-        if len(entries) > MAX_ENTRIES:
-            for pid, _ in entries[MAX_ENTRIES:]:
-                role_candidates[pid] = ("Anchor", 0)  # Demote to Anchor
+        # Apply quotas to each team separately
+        apply_quota_per_team("AWPer", MAX_AWPERS_PER_TEAM, team1_pids)
+        apply_quota_per_team("AWPer", MAX_AWPERS_PER_TEAM, team2_pids)
+        apply_quota_per_team("Entry", MAX_ENTRIES_PER_TEAM, team1_pids)
+        apply_quota_per_team("Entry", MAX_ENTRIES_PER_TEAM, team2_pids)
         
         # Extract final roles
         for pid, (role, _) in role_candidates.items():

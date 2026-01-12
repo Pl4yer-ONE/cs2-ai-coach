@@ -165,9 +165,9 @@ class JsonReporter:
         scores["impact"] = clamped_impact
         scores["raw_impact"] = round(raw_impact, 1)  # Store raw for calibration
         
-        # Handle hidden utility score - never output null
+        # Handle hidden utility score - let frontend decide display
         if scores["utility"] == -1:
-            scores["utility"] = 0
+            scores["utility"] = None  # Semantic: metric not available
             
         overall_rating = ScoreEngine.compute_final_rating(
             scores, 
