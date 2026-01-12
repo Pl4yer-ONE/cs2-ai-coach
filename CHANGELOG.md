@@ -119,7 +119,7 @@ Major release introducing standalone demo playback without CS2 installed.
 
 ### Added
 - **Floor Clamp**: Minimum rating of 15 (no more zeros)
-- **MIT License**: Open source ready
+- **License Added**: MIT (later changed to PolyForm Noncommercial in v3.0.1)
 - `team_id` field in PlayerFeatures for proper team assignment
 
 ### Changed
