@@ -20,6 +20,7 @@ Thumbs.db
 
 # Output directories
 outputs/
+reports/
 *.png
 *.json
 !package.json
@@ -44,3 +45,7 @@ htmlcov/
 # Environment
 .env
 .env.local
+
+# Debug/temp files
+debug_*.py
+TEST_REPORT.txt
