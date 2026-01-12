@@ -241,7 +241,7 @@ class ScoreEngine:
         # Exit frags are low-value kills, reduce their WPA contribution
         # REDUCED for Rotator/Trader - they naturally rotate late
         if exit_frags > 3:
-            exit_discount = (exit_frags - 3) * 2.0  # Each exit frag over 3 = -2 pts
+            exit_discount = (exit_frags - 3) * 3.5  # HARSHER (was 2.0)
             # Role-aware: Rotators get 60% reduced penalty (0.4x)
             if swing_score > 5:  # Rotators have high swing kills
                 exit_discount *= 0.4  # NERFED from 0.5
@@ -337,7 +337,7 @@ class ScoreEngine:
             if kdr < 0.7:
                 rating *= 0.90  # Heavy penalty
             elif kdr < 1.0:
-                rating *= 0.93  # Dying tax - entries should still frag
+                rating *= 0.90  # Dying tax - HARSHER (was 0.93)
         elif role == "AWPer":
             if kdr < 0.8:
                 rating *= 0.85  # Feeding as AWP is expensive
@@ -355,16 +355,16 @@ class ScoreEngine:
             rating *= 0.95
         
         # 5d. KILL-GATED GOD RATING: Can't be 98 with mediocre kills
-        if raw_impact > 110 and kills < 18:
-            rating *= 0.95
+        if raw_impact > 105 and kills < 18:
+            rating *= 0.90  # HARSHER (was 0.95 at 110)
         
         # 6. Dynamic role cap (map-aware)
         role_cap = get_dynamic_role_cap(role, map_name)
         
         # 7. ANCHOR BREAKOUT RULE: Don't suppress legit carries
-        # GUARDED: require KDR > 1.1 to prevent inflated ratings
+        # GUARDED: require KDR > 1.1 AND KAST > 65%
         if role in ("Anchor", "Rotator", "SiteAnchor", "Trader") and raw_impact > role_cap + 15:
-            if kdr > 1.1:  # Must have positive KDR to break out
+            if kdr > 1.1 and kast_percentage > 0.65:  # Must have good fundamentals
                 role_cap += 10
         
         rating = min(rating, role_cap)
