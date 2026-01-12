@@ -131,20 +131,28 @@ python main.py check-parsers
 
 ## Architecture
 
+```mermaid
+graph TD
+    User[User] --> CLI[Main CLI]
+    CLI -->|play| Player[Demo Player]
+    CLI -->|analyze| Parser[Demo Parser]
+    
+    subgraph Engine
+        Parser -->|ParsedDemo| Features[Feature Extractor]
+        Features -->|PlayerFeatures| Metrics[Score Engine]
+        Metrics -->|Scores| Classifier[Mistake Classifier]
+        Classifier -->|Mistakes| Report[Report Generator]
+    end
+    
+    Player -->|Render| Pygame[Pygame Window]
+    Report -->|JSON/MD| Output[Output Files]
 ```
-FragAudit/
-├── src/
-│   ├── parser/          # Demo parsing (demoparser2/awpy)
-│   ├── features/        # Feature extraction
-│   ├── metrics/         # Scoring engine
-│   ├── classifier/      # Mistake classification
-│   ├── player/          # Demo playback [NEW]
-│   ├── visualization/   # Heatmaps
-│   └── report/          # JSON/Markdown output
-├── match/               # Demo files
-├── outputs/             # Generated reports
-└── tests/               # Unit tests
-```
+
+## Demo Preview
+
+![Demo Player Preview](docs/demo_preview.gif)
+
+> *Visual playback of a Dust2 match running at 64 tick.*
 
 ---
 
