@@ -2,19 +2,75 @@ PolyForm Noncommercial License 1.0.0
 
 Copyright (c) 2026 Pl4yer-ONE
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to use,
-copy, modify, merge, publish, distribute, and sublicense the Software for
-non-commercial purposes only, subject to the following conditions:
+1. Acceptance
 
-Commercial use of the Software is strictly prohibited without explicit
-written permission from the copyright holder.
+By Using the Software, You agree to this license. If You do not agree to this
+license, Do not Use the Software.
 
-"Commercial use" means any use of the Software or its derivatives in a
-product or service that is sold, licensed, monetized, or used for
-commercial advantage.
+2. Copyright License
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+The Licensor grants You a non-exclusive, royalty-free, worldwide,
+non-sublicensable, non-transferable license to Use the Software for
+Noncommercial Purposes.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+3. Distribution License
+
+The Licensor grants You a non-exclusive, royalty-free, worldwide,
+non-sublicensable, non-transferable license to Distribute the Software for
+Noncommercial Purposes.
+
+4. Notices
+
+You must ensure that anyone who gets a copy of any part of the Software from You
+also gets a copy of this license and the copyright notice.
+
+5. Modifications
+
+If You Modify the Software, You must include a notice stating that You modified
+the Software and the date of modification.
+
+6. Term
+
+This license is effective until terminated. You may terminate it at any time by
+ceasing to Use the Software. This license will terminate immediately if You fail
+to comply with any of its terms.
+
+7. Disclaimer
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+LICENSOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+8. Definitions
+
+"Commercial Purpose" means any purpose that is for profit or gain, including
+but not limited to:
+a. Using the Software to provide a service or product that is sold, leased,
+   licensed, or otherwise distributed for a fee;
+b. Using the Software to support the operations of a business or other
+   organization that operates for profit or gain;
+c. Using the Software to develop changes to the Software for a fee and/or which
+   are licensed under this or another license for a fee;
+d. Using the Software to generate revenue from advertising or other sources;
+or
+e. Distributing the Software with other software or content that is not
+   licensed under this license or a generated compatible license.
+
+"Distribute" means to make the Software available to others.
+
+"Licensor" means the individual or entity that offers the Software under this
+license.
+
+"Modify" means to create a derivative work of the Software.
+
+"Noncommercial Purpose" means any purpose that is not a Commercial Purpose.
+
+"Software" means the software, documentation, and other content accompanying
+this license.
+
+"Use" means to copy, install, execute, display, or modify the Software.
+
+"You" means the individual or entity exercising rights under this license.

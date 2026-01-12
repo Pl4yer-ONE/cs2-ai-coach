@@ -214,16 +214,10 @@ python -m pytest tests/ -v
 
 ## License
 
-This project is licensed under **PolyForm Noncommercial 1.0.0**.
+FragAudit is licensed under the **PolyForm Noncommercial License 1.0.0**.
 
-Commercial use is NOT permitted without explicit written permission.
-
-If you want to:
-- use this in a paid product
-- integrate into SaaS
-- monetize in any way
-
-You MUST contact me first.
+Commercial use is **strictly prohibited** without explicit written permission.
+For commercial licensing inquiries, open an issue on GitHub.
 
 ---
 
@@ -231,6 +225,6 @@ You MUST contact me first.
 
 **FragAudit** — *Where every frag gets audited.*
 
-*v3.0.1 — Noncommercial Edition*
+*v3.0.1+ — Noncommercial Edition*
 
 </div>
