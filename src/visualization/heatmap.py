@@ -320,7 +320,8 @@ class HeatmapGenerator:
             cbar.outline.set_edgecolor('white')
             cbar.ax.tick_params(labelsize=8, colors='white')
             # Add labels
-            cbar.ax.set_yticklabels(['Low', '', '', '', 'Med', '', '', '', '', 'High'])
+            cbar.set_ticks([0, 0.5, 1])
+            cbar.set_ticklabels(['Low', 'Med', 'High'])
         
         # Title & Annotations
         side_text = f" ({self.side})" if self.side else ""
