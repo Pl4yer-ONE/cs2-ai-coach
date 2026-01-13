@@ -414,10 +414,22 @@ def run_analyze(args) -> int:
                         radar_html = f'''
         <h2>Radar Replay</h2>
         <div style="text-align: center; margin: 2rem 0;">
-            <video controls autoplay loop muted style="max-width: 100%; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+            <video id="radarVideo" controls style="max-width: 100%; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
                 <source src="data:video/mp4;base64,{video_b64}" type="video/mp4">
             </video>
-            <p style="color: #888; margin-top: 1rem;">Player movement replay for {parsed_demo.map_name}</p>
+            <div style="margin-top: 1rem; display: flex; justify-content: center; gap: 1rem; align-items: center;">
+                <button onclick="document.getElementById('radarVideo').playbackRate = 0.5" style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #4ecdc4; background: transparent; color: #4ecdc4; cursor: pointer;">0.5x</button>
+                <button onclick="document.getElementById('radarVideo').playbackRate = 1" style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #4ecdc4; background: #4ecdc4; color: #1a1a2e; cursor: pointer;">1x</button>
+                <button onclick="document.getElementById('radarVideo').playbackRate = 2" style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #4ecdc4; background: transparent; color: #4ecdc4; cursor: pointer;">2x</button>
+                <button onclick="document.getElementById('radarVideo').playbackRate = 4" style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #4ecdc4; background: transparent; color: #4ecdc4; cursor: pointer;">4x</button>
+            </div>
+            <div style="margin-top: 1rem; display: flex; justify-content: center; gap: 2rem; font-size: 0.85rem; color: #888;">
+                <span><span style="display: inline-block; width: 12px; height: 12px; background: #5C7AEA; border-radius: 50%; margin-right: 4px;"></span> CT</span>
+                <span><span style="display: inline-block; width: 12px; height: 12px; background: #E94560; border-radius: 50%; margin-right: 4px;"></span> T</span>
+                <span><span style="display: inline-block; width: 12px; height: 12px; background: #FFD93D; margin-right: 4px;"></span> Bomb</span>
+                <span><span style="display: inline-block; width: 12px; height: 12px; background: #AAAAAA; border-radius: 50%; margin-right: 4px; opacity: 0.5;"></span> Smoke</span>
+            </div>
+            <p style="color: #888; margin-top: 0.5rem;">Player movement replay for {parsed_demo.map_name}</p>
         </div>
 '''
                         html_content = html_content.replace('</div>\n</body>', radar_html + '</div>\n</body>')

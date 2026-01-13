@@ -25,13 +25,27 @@ class PlayerFrame:
 
 
 @dataclass
+class SmokeFrame:
+    """Active smoke grenade."""
+    x: float
+    y: float
+    tick_start: int
+    duration_ticks: int = 1152  # ~18 seconds at 64 tick
+
+
+@dataclass
 class TickFrame:
     """All player states at a single tick."""
     tick: int
     players: List[PlayerFrame]
     bomb_x: Optional[float] = None
     bomb_y: Optional[float] = None
+    smokes: List[SmokeFrame] = None
     round_num: int = 0
+    
+    def __post_init__(self):
+        if self.smokes is None:
+            self.smokes = []
 
 
 def extract_ticks(
@@ -70,6 +84,18 @@ def extract_ticks(
         sampled_ticks = sampled_ticks[:max_ticks]
     
     print(f"  Processing {len(sampled_ticks)} frames from {len(all_ticks)} ticks...")
+    
+    # Extract smoke detonations for overlay
+    smoke_events = []
+    grenades = demo.grenades
+    if grenades is not None and not grenades.empty:
+        smoke_df = grenades[grenades.get('grenade_type', pd.Series()) == 'smoke']
+        for _, row in smoke_df.iterrows():
+            x = float(row.get('X', row.get('x', 0)))
+            y = float(row.get('Y', row.get('y', 0)))
+            tick = int(row.get('tick', 0))
+            if x != 0 and y != 0:
+                smoke_events.append(SmokeFrame(x=x, y=y, tick_start=tick))
     
     frames = []
     
@@ -116,10 +142,17 @@ def extract_ticks(
             ))
         
         if players:
+            # Find active smokes at this tick
+            active_smokes = [
+                s for s in smoke_events
+                if s.tick_start <= tick <= s.tick_start + s.duration_ticks
+            ]
+            
             frames.append(TickFrame(
                 tick=tick,
                 players=players,
-                round_num=0  # Could extract from rounds data
+                smokes=active_smokes,
+                round_num=0
             ))
     
     return frames

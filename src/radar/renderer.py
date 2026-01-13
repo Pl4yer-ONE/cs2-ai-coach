@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 from PIL import Image
 
-from src.radar.extractor import TickFrame, PlayerFrame
+from src.radar.extractor import TickFrame, PlayerFrame, SmokeFrame
 from src.visualization.map_coords import world_to_radar, load_map_registry
 
 
@@ -21,8 +21,10 @@ from src.visualization.map_coords import world_to_radar, load_map_registry
 CT_COLOR = '#5C7AEA'      # Blue
 T_COLOR = '#E94560'       # Red  
 BOMB_COLOR = '#FFD93D'    # Yellow
+SMOKE_COLOR = '#AAAAAA'   # Gray
 DEAD_ALPHA = 0.25
 ALIVE_ALPHA = 0.9
+SMOKE_RADIUS = 30         # Radar pixels (~144 units in-game)
 
 
 class RadarRenderer:
@@ -80,6 +82,10 @@ class RadarRenderer:
             ax.imshow(self.map_image, extent=[0, self.resolution, self.resolution, 0], zorder=1)
         else:
             ax.set_facecolor('#16213e')
+        
+        # Draw smokes first (below players)
+        for smoke in frame.smokes:
+            self._draw_smoke(ax, smoke, frame.tick)
         
         # Draw players
         for player in frame.players:
@@ -173,6 +179,48 @@ class RadarRenderer:
                 ha='center', va='bottom',
                 alpha=0.8
             )
+    
+    def _draw_smoke(self, ax, smoke: SmokeFrame, current_tick: int):
+        """Draw a smoke grenade circle on the map."""
+        # Convert world coords to radar coords
+        sx, sy = world_to_radar(
+            np.array([smoke.x]),
+            np.array([smoke.y]),
+            self.map_config,
+            self.resolution
+        )
+        
+        if len(sx) == 0 or len(sy) == 0:
+            return
+            
+        sx, sy = sx[0], sy[0]
+        
+        # Skip if out of bounds
+        if sx < 0 or sx > self.resolution or sy < 0 or sy > self.resolution:
+            return
+        
+        # Calculate smoke age and fade
+        age = current_tick - smoke.tick_start
+        remaining = smoke.duration_ticks - age
+        
+        # Fade out in last 20% of duration
+        fade_start = smoke.duration_ticks * 0.8
+        if remaining < fade_start:
+            alpha = max(0.1, 0.5 * (remaining / fade_start))
+        else:
+            alpha = 0.5
+        
+        # Draw smoke circle
+        circle = Circle(
+            (sx, sy), 
+            SMOKE_RADIUS,
+            facecolor=SMOKE_COLOR,
+            edgecolor='#888888',
+            alpha=alpha,
+            linewidth=1,
+            zorder=3
+        )
+        ax.add_patch(circle)
     
     def render_all(self, frames: List[TickFrame], progress_interval: int = 100) -> List[str]:
         """
