@@ -134,12 +134,13 @@ class ReportGenerator:
             },
             "mistakes": [
                 {
+                    "round": m.round_num,
+                    "time": f"{int(m.round_time_seconds // 60)}:{int(m.round_time_seconds % 60):02d}",
+                    "location": m.map_area,
                     "type": m.mistake_type,
                     "details": m.details,
-                    "severity": m.severity,
-                    "correction": m.correction,
-                    "round": m.round_num,
-                    "tick": m.tick
+                    "fix": m.correction,
+                    "severity": f"{int(m.severity * 100)}%"
                 }
                 for m in mistakes
             ],
@@ -237,15 +238,17 @@ class ReportGenerator:
             
             # Mistakes
             if player_data["mistakes"]:
-                lines.append("### Improvement Areas")
+                lines.append("### Mistakes")
                 lines.append("")
                 for mistake in player_data["mistakes"]:
-                    severity_emoji = "🔴" if mistake["severity"] >= 0.8 else "🟡" if mistake["severity"] >= 0.5 else "🟢"
-                    lines.append(f"#### {severity_emoji} {mistake['type'].replace('_', ' ').title()}")
+                    sev = mistake["severity"]
+                    severity_emoji = "🔴" if "8" in sev or "9" in sev else "🟡" if "5" in sev or "6" in sev or "7" in sev else "🟢"
+                    lines.append(f"#### {severity_emoji} Round {mistake['round']} | {mistake['time']} | {mistake['location']}")
                     lines.append("")
-                    lines.append(f"- **Details:** {mistake['details']}")
-                    lines.append(f"- **Correction:** {mistake['correction']}")
-                    lines.append(f"- **Severity:** {mistake['severity']:.0%}")
+                    lines.append(f"**{mistake['type'].replace('_', ' ').title()}**")
+                    lines.append(f"- {mistake['details']}")
+                    lines.append(f"- **Fix:** {mistake['fix']}")
+                    lines.append(f"- Severity: {mistake['severity']}")
                     lines.append("")
             
             # Feedback

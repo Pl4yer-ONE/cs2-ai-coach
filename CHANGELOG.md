@@ -5,12 +5,34 @@ All notable changes to the CS2 AI Coach project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.0.1] - License Lockdown
+## [3.1.0] - 2026-01-13
+
+### 🔓 OPEN SOURCE EDITION
+
+Major release switching to MIT license and focusing on usability.
 
 ### Changed
-- Replaced MIT license with **PolyForm Noncommercial 1.0.0**
-- Commercial usage now requires explicit written permission
-- Added `CONTRIBUTING.md` with strict non-commercial rules
+- **License**: Switched from PolyForm Noncommercial to **MIT** — use it however you want
+- **README**: Complete rewrite — honest, no buzzwords, clear limitations
+- **Output Format**: Mistakes now show round, time, and map location
+- **CONTRIBUTING.md**: Simplified for open contribution
+
+### Added
+- **HTML Reports**: `--html` flag generates shareable HTML reports with embedded CSS
+- **Better Context**: Each mistake includes round number, timestamp, and map callout
+- **Player Names**: Mistakes now tagged with player name for clarity
+
+### Removed
+- COMMERCIAL.md — no longer needed with MIT license
+- Buzzwords: "deterministic auditing", "exploit-resistant", "forensic analysis"
+
+---
+
+## [3.0.1] - License Lockdown (Deprecated)
+
+### Changed
+- Previously used PolyForm Noncommercial
+- Now replaced by MIT in v3.1.0
 
 ## [3.0.0] - 2026-01-12
 

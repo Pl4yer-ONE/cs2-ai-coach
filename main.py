@@ -82,6 +82,12 @@ For more information, see README.md
     )
     
     analyze_parser.add_argument(
+        "--html",
+        action="store_true",
+        help="Generate HTML report (shareable)"
+    )
+    
+    analyze_parser.add_argument(
         "--player",
         type=str,
         help="Analyze specific player only (by Steam ID or name)"
@@ -281,6 +287,17 @@ def run_analyze(args) -> int:
                 md_filename = None
             md_path = generator.save_markdown(report, md_filename)
             print(f"Markdown report saved: {md_path}")
+        
+        if getattr(args, 'html', False):
+            from src.report.html_reporter import HTMLReporter
+            html_gen = HTMLReporter()
+            if args.output:
+                base = args.output.rsplit('.', 1)[0] if '.' in args.output else args.output
+                html_filename = f"{base}.html"
+            else:
+                html_filename = None
+            html_path = html_gen.save(report, html_filename)
+            print(f"HTML report saved: {html_path}")
         
         # Print summary
         generator.print_summary(report)
