@@ -64,13 +64,17 @@ class HTMLReporter:
             else:
                 mistakes_html = '<div class="no-issues">✓ No issues detected</div>'
             
+            # Trade score color class
+            trade_score = stats.get('trade_potential_score', 0)
+            trade_class = 'kd-good' if trade_score >= 60 else 'kd-mid' if trade_score >= 30 else 'kd-bad'
+            
             players_html += f'''
             <div class="player-card">
                 <div class="player-name">{player_name}</div>
                 <div class="player-stats">
                     <span>K/D: <strong class="{kd_class}">{kd}</strong></span>
                     <span>HS: {stats.get('headshot_percentage', 0)}%</span>
-                    <span>ADR: {stats.get('damage_per_round', 0)}</span>
+                    <span>Trade: <strong class="{trade_class}">{trade_score}%</strong></span>
                     <span>Role: {stats.get('detected_role', 'Unknown')}</span>
                 </div>
                 {mistakes_html}

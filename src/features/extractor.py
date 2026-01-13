@@ -188,6 +188,7 @@ class PlayerFeatures:
     exposed_death_ratio: float = 0.0
     tradeable_deaths: int = 0
     untradeable_death_ratio: float = 0.0
+    trade_potential_score: int = 0  # 0-100: % of deaths that were tradeable
     avg_teammate_dist: float = 0.0
     
     # Entry frag tracking (Opening Duels)
@@ -661,6 +662,12 @@ class FeatureExtractor:
             non_entry = player.deaths - player.entry_deaths
             untraded = len([d for d in player.death_contexts if not d.was_traded and not d.is_entry_frag])
             player.untradeable_death_ratio = untraded / max(1, non_entry)
+            
+            # 4. Trade Potential Score: % of deaths that were tradeable (0-100)
+            if player.deaths > 0:
+                player.trade_potential_score = int(100 * player.tradeable_deaths / player.deaths)
+            else:
+                player.trade_potential_score = 100  # No deaths = perfect
 
     def _extract_clutch_and_opening_duels(self):
         """

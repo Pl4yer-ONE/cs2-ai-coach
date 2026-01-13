@@ -123,6 +123,7 @@ class ReportGenerator:
                 "entry_deaths": getattr(features, 'entry_deaths', 0),
                 "traded_deaths": getattr(features, 'tradeable_deaths', 0),
                 "untradeable_death_ratio": round(getattr(features, 'untradeable_death_ratio', 0) * 100, 1),
+                "trade_potential_score": getattr(features, 'trade_potential_score', 0),
                 # Role detection
                 "detected_role": getattr(features, 'detected_role', 'support'),
                 "entry_death_ratio": round(getattr(features, 'entry_death_ratio', 0) * 100, 1),
@@ -325,8 +326,12 @@ class ReportGenerator:
             # Color K/D
             kd_color = GREEN if kd >= 1.2 else YELLOW if kd >= 0.9 else RED
             
+            # Trade score with color
+            trade_score = stats.get('trade_potential_score', 0)
+            trade_color = GREEN if trade_score >= 60 else YELLOW if trade_score >= 30 else RED
+            
             print(f"\n  {BOLD}{player_name}{RESET}")
-            print(f"    K/D: {kd_color}{kd}{RESET}  HS: {hs}%  Role: {role}")
+            print(f"    K/D: {kd_color}{kd}{RESET}  HS: {hs}%  Trade: {trade_color}{trade_score}%{RESET}  Role: {role}")
             
             if mistakes:
                 for m in mistakes[:2]:  # Show top 2 mistakes
