@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FragAudit Report - de_dust2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+            line-height: 1.6;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #ff6b35;
+        }
+
+        .subtitle {
+            color: #888;
+            margin-top: 0.5rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .stat-card {
+            background: rgba(78, 205, 196, 0.1);
+            border: 1px solid rgba(78, 205, 196, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #4ecdc4;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        h2 {
+            color: #4ecdc4;
+            margin: 2rem 0 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(78, 205, 196, 0.3);
+        }
+
+        .player-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid #4ecdc4;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .player-card:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 20px rgba(78, 205, 196, 0.2);
+        }
+
+        .player-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+
+        .player-stats {
+            display: flex;
+            gap: 2rem;
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .player-stats span {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .kd-good {
+            color: #4ecdc4;
+        }
+
+        .kd-mid {
+            color: #f7d354;
+        }
+
+        .kd-bad {
+            color: #ff6b6b;
+        }
+
+        .mistake {
+            background: rgba(255, 107, 53, 0.1);
+            border-left: 3px solid #ff6b35;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .mistake-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .mistake-context {
+            color: #888;
+            font-size: 0.85rem;
+        }
+
+        .mistake-type {
+            color: #ff6b35;
+            font-weight: bold;
+        }
+
+        .mistake-fix {
+            color: #4ecdc4;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .severity {
+            background: rgba(255, 107, 53, 0.2);
+            padding: 0.2rem 0.6rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .no-issues {
+            color: #4ecdc4;
+            padding: 0.5rem 0;
+        }
+
+        .issue-bar {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .issue-name {
+            width: 150px;
+            color: #888;
+        }
+
+        .issue-visual {
+            flex: 1;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .issue-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b35, #f7d354);
+            border-radius: 4px;
+        }
+
+        .issue-count {
+            width: 40px;
+            text-align: right;
+            font-weight: bold;
+        }
+
+        footer {
+            text-align: center;
+            color: #666;
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        footer a {
+            color: #4ecdc4;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">FRAGAUDIT</div>
+            <div class="subtitle">de_dust2 • acend-vs-washington-m1-dust2.dem</div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">10</div>
+                <div class="stat-label">Players</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">6</div>
+                <div class="stat-label">Issues</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">dry_peek</div>
+                <div class="stat-label">Most Common</div>
+            </div>
+        </div>
+
+        <h2>Issue Distribution</h2>
+        <div class="issue-bar">
+            <div class="issue-name">dry peek</div>
+            <div class="issue-visual">
+                <div class="issue-fill" style="width: 100%"></div>
+            </div>
+            <div class="issue-count">6</div>
+        </div>
+
+        <h2>Player Reports</h2>
+
+        <div class="player-card">
+            <div class="player-name">shaiK</div>
+            <div class="player-stats">
+                <span>K/D: <strong class="kd-good">1.69</strong></span>
+                <span>HS: 72.7%</span>
+                <span>ADR: 95.2</span>
+                <span>Role: Entry</span>
+            </div>
+            <div class="mistake">
+                <div class="mistake-header">
+                    <span class="mistake-context">Round 5 • 0:45 • B Apartments</span>
+                    <span class="severity">70%</span>
+                </div>
+                <div class="mistake-type">Dry Peek</div>
+                <div>Challenged angle without flash support</div>
+                <div class="mistake-fix">Fix: Wait for teammate flash or jiggle peek first</div>
+            </div>
+        </div>
+
+        <div class="player-card">
+            <div class="player-name">KalubeR</div>
+            <div class="player-stats">
+                <span>K/D: <strong class="kd-good">1.64</strong></span>
+                <span>HS: 69.6%</span>
+                <span>ADR: 88.1</span>
+                <span>Role: Support</span>
+            </div>
+            <div class="no-issues">✓ No issues detected</div>
+        </div>
+
+        <div class="player-card">
+            <div class="player-name">Girafffe</div>
+            <div class="player-stats">
+                <span>K/D: <strong class="kd-bad">0.80</strong></span>
+                <span>HS: 33.3%</span>
+                <span>ADR: 62.4</span>
+                <span>Role: Lurker</span>
+            </div>
+            <div class="mistake">
+                <div class="mistake-header">
+                    <span class="mistake-context">Round 12 • 1:18 • Mid</span>
+                    <span class="severity">70%</span>
+                </div>
+                <div class="mistake-type">Dry Peek</div>
+                <div>Challenged angle without flash support</div>
+                <div class="mistake-fix">Fix: Wait for teammate flash or jiggle peek first</div>
+            </div>
+        </div>
+
+        <div class="player-card">
+            <div class="player-name">bevve</div>
+            <div class="player-stats">
+                <span>K/D: <strong class="kd-mid">1.06</strong></span>
+                <span>HS: 66.7%</span>
+                <span>ADR: 71.3</span>
+                <span>Role: Support</span>
+            </div>
+            <div class="mistake">
+                <div class="mistake-header">
+                    <span class="mistake-context">Round 8 • 0:32 • A Long</span>
+                    <span class="severity">70%</span>
+                </div>
+                <div class="mistake-type">Dry Peek</div>
+                <div>Challenged angle without flash support</div>
+                <div class="mistake-fix">Fix: Wait for teammate flash or jiggle peek first</div>
+            </div>
+        </div>
+
+        <footer>
+            Generated by <a href="https://github.com/Pl4yer-ONE/FragAudit">FragAudit</a> — MIT Licensed
+        </footer>
+    </div>
+</body>
+
+</html>

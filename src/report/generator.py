@@ -274,29 +274,67 @@ class ReportGenerator:
         return "\n".join(lines)
     
     def print_summary(self, report: Dict[str, Any]):
-        """Print a quick summary to console."""
-        print("\n" + "=" * 50)
-        print("CS2 COACHING REPORT SUMMARY")
-        print("=" * 50)
+        """Print a styled summary to console with colors."""
+        # ANSI color codes
+        BOLD = "\033[1m"
+        CYAN = "\033[96m"
+        GREEN = "\033[92m"
+        YELLOW = "\033[93m"
+        RED = "\033[91m"
+        DIM = "\033[2m"
+        RESET = "\033[0m"
         
         summary = report["summary"]
-        print(f"Players analyzed: {summary['total_players_analyzed']}")
-        print(f"Issues found: {summary['total_mistakes_found']}")
+        meta = report.get("meta", {})
         
+        # Header
+        print(f"\n{BOLD}{CYAN}{'═' * 60}{RESET}")
+        print(f"{BOLD}{CYAN}  FRAGAUDIT ANALYSIS{RESET}")
+        print(f"{CYAN}{'═' * 60}{RESET}")
+        
+        # Meta info
+        print(f"\n{DIM}  Map: {meta.get('map', 'Unknown')}{RESET}")
+        print(f"{DIM}  Demo: {meta.get('demo_file', 'Unknown')}{RESET}")
+        
+        # Stats row
+        total_players = summary['total_players_analyzed']
+        total_issues = summary['total_mistakes_found']
+        issue_color = GREEN if total_issues < 5 else YELLOW if total_issues < 10 else RED
+        
+        print(f"\n  {BOLD}Players:{RESET} {total_players}    {BOLD}Issues:{RESET} {issue_color}{total_issues}{RESET}")
+        
+        # Issues breakdown
         if summary.get("mistakes_by_type"):
-            print("\nIssues by type:")
-            for mtype, count in summary["mistakes_by_type"].items():
-                print(f"  - {mtype}: {count}")
+            print(f"\n  {DIM}Issue Types:{RESET}")
+            for mtype, count in sorted(summary["mistakes_by_type"].items(), key=lambda x: -x[1]):
+                bar = "█" * min(count, 10) + "░" * (10 - min(count, 10))
+                print(f"    {mtype.replace('_', ' '):20} {bar} {count}")
         
-        print("\n" + "-" * 50)
+        print(f"\n{CYAN}{'─' * 60}{RESET}")
+        print(f"{BOLD}  PLAYER BREAKDOWN{RESET}")
+        print(f"{CYAN}{'─' * 60}{RESET}")
         
+        # Player cards
         for player_id, player_data in report["players"].items():
             stats = player_data["stats"]
-            player_name = player_data.get("player_name", "") or player_id
-            print(f"\nPlayer: {player_name}")
-            print(f"  K/D: {stats['kd_ratio']} | HS%: {stats['headshot_percentage']}%")
+            player_name = player_data.get("player_name") or player_id[:12]
+            kd = stats['kd_ratio']
+            hs = stats['headshot_percentage']
+            role = stats.get('detected_role', '')
+            mistakes = player_data.get("mistakes", [])
             
-            if player_data["improvement_priority"]:
-                print(f"  Focus: {', '.join(player_data['improvement_priority'][:2])}")
+            # Color K/D
+            kd_color = GREEN if kd >= 1.2 else YELLOW if kd >= 0.9 else RED
+            
+            print(f"\n  {BOLD}{player_name}{RESET}")
+            print(f"    K/D: {kd_color}{kd}{RESET}  HS: {hs}%  Role: {role}")
+            
+            if mistakes:
+                for m in mistakes[:2]:  # Show top 2 mistakes
+                    sev = m.get('severity', '50%')
+                    sev_icon = "🔴" if "8" in sev or "9" in sev else "🟡" if "5" in sev or "6" in sev or "7" in sev else "🟢"
+                    print(f"    {sev_icon} R{m.get('round', '?')} {m.get('time', '')} — {m.get('type', '').replace('_', ' ')}")
+            else:
+                print(f"    {GREEN}✓ No issues detected{RESET}")
         
-        print("\n" + "=" * 50)
+        print(f"\n{CYAN}{'═' * 60}{RESET}\n")

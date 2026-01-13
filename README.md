@@ -104,33 +104,36 @@ python main.py play match.dem
 ## Sample Output
 
 ```
-==================================================
-CS2 COACHING REPORT
-==================================================
-Demo: match/acend-vs-washington-m1-dust2.dem
-Map: de_dust2
-Players: 10
-Mistakes found: 6
+════════════════════════════════════════════════════════════
+  FRAGAUDIT ANALYSIS
+════════════════════════════════════════════════════════════
 
---------------------------------------------------
-ROUND 5 | 1:18 | B Apartments
---------------------------------------------------
-Player: shaiK
-Mistake: dry_peek
-Details: Challenged angle without flash support
-Fix: Wait for teammate flash or jiggle peek first
-Severity: 70%
+  Map: de_dust2
+  Demo: match.dem
 
---------------------------------------------------
-ROUND 12 | 0:45 | Mid
---------------------------------------------------
-Player: Girafffe  
-Mistake: untradeable_death
-Details: Died 480u from nearest teammate
-Fix: Stay within 400u when taking contact
-Severity: 85%
-==================================================
+  Players: 10    Issues: 6
+
+  Issue Types:
+    dry peek             ██████░░░░ 6
+
+────────────────────────────────────────────────────────────
+  PLAYER BREAKDOWN
+────────────────────────────────────────────────────────────
+
+  shaiK
+    K/D: 1.69  HS: 72.7%  Role: Entry
+    🟡 R5 0:45 — dry peek
+
+  KalubeR
+    K/D: 1.64  HS: 69.6%  Role: Support
+    ✓ No issues detected
+
+════════════════════════════════════════════════════════════
 ```
+
+📄 **See sample reports:** [Markdown](examples/sample_report.md) | [HTML](examples/sample_report.html)
+
+📖 **Full usage guide:** [docs/USAGE.md](docs/USAGE.md)
 
 ---
 
