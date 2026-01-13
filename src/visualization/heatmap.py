@@ -262,7 +262,7 @@ class HeatmapGenerator:
         cmap: LinearSegmentedColormap,
         sigma: float
     ) -> str:
-        """Render high-quality heatmap to PNG."""
+        """Render high-quality heatmap to PNG with legend."""
         raw_event_count = int(grid.sum())
         
         # Apply Gaussian smoothing
@@ -276,57 +276,85 @@ class HeatmapGenerator:
         else:
             grid_norm = np.zeros_like(grid)
             
-        # Create figure
-        fig, ax = plt.subplots(figsize=(10.24, 10.24), dpi=100)
+        # Create figure with space for colorbar
+        fig = plt.figure(figsize=(11.5, 10.24), dpi=100)
+        ax = fig.add_axes([0.02, 0.05, 0.85, 0.88])  # Main plot
+        cbar_ax = fig.add_axes([0.89, 0.15, 0.03, 0.6])  # Colorbar
         
         # Background color
         fig.patch.set_facecolor('#1a1a2e')
         
-        # 2. Overlay on Map (if available)
+        # 1. Overlay on Map (if available)
         if self.map_image_path and os.path.exists(self.map_image_path):
             try:
+                from PIL import Image
                 map_img = Image.open(self.map_image_path).convert("RGBA")
-                # Resize if needed to match resolution (though typically we want 1024x1024)
                 if map_img.size != (self.resolution, self.resolution):
                     map_img = map_img.resize((self.resolution, self.resolution), Image.Resampling.LANCZOS)
-                
-                # Plot map
                 ax.imshow(map_img, extent=[0, self.resolution, self.resolution, 0], zorder=1)
             except Exception as e:
                 print(f"    ⚠️ Failed to load map image: {e}")
+                ax.set_facecolor('#16213e')
         else:
-             # Black background if no map
-             ax.set_facecolor('black')
+            ax.set_facecolor('#16213e')
         
         # 2. Overlay Heatmap
+        im = None
         if raw_event_count > 0:
-            ax.imshow(
+            im = ax.imshow(
                 grid_norm,
                 cmap=cmap,
-                origin='upper', # Match image coords
+                origin='upper',
                 extent=[0, self.resolution, self.resolution, 0],
                 alpha=0.8,
-                zorder=2
+                zorder=2,
+                vmin=0,
+                vmax=1
             )
+        
+        # 3. Add Colorbar Legend
+        if im is not None:
+            cbar = fig.colorbar(im, cax=cbar_ax)
+            cbar.set_label('Kill Density', color='white', fontsize=10)
+            cbar.ax.yaxis.set_tick_params(color='white')
+            cbar.outline.set_edgecolor('white')
+            cbar.ax.tick_params(labelsize=8, colors='white')
+            # Add labels
+            cbar.ax.set_yticklabels(['Low', '', '', '', 'Med', '', '', '', '', 'High'])
         
         # Title & Annotations
         side_text = f" ({self.side})" if self.side else ""
         phase_text = f" [{self.phase.upper()}]" if self.phase else ""
-        full_title = f"{title}{side_text}{phase_text}\n{self.map_name.upper()}"
+        full_title = f"{title}{side_text}{phase_text}"
         
-        ax.set_title(full_title, color='white', fontsize=14, loc='left', pad=10)
+        ax.set_title(full_title, color='white', fontsize=14, fontweight='bold', loc='left', pad=10)
+        ax.text(0.5, 1.02, self.map_name.upper(), transform=ax.transAxes, 
+                color='#4ecdc4', fontsize=12, ha='center', fontweight='bold')
         ax.axis('off')
         
-        # Stats
+        # Stats Box
+        stats_text = f"Events: {raw_event_count}"
+        if max_density > 0:
+            # Find hotspot location (highest density pixel)
+            hotspot_idx = np.unravel_index(np.argmax(grid), grid.shape)
+            stats_text += f"\nHotspot: ({hotspot_idx[1]}, {hotspot_idx[0]})"
+        
         ax.text(
-            0.02, 0.02, f"Events: {raw_event_count}",
-            transform=ax.transAxes, color='white', fontsize=10,
-            bbox=dict(facecolor='black', alpha=0.5, edgecolor='none')
+            0.02, 0.02, stats_text,
+            transform=ax.transAxes, color='white', fontsize=9,
+            bbox=dict(facecolor='black', alpha=0.7, edgecolor='#4ecdc4', boxstyle='round,pad=0.5'),
+            verticalalignment='bottom'
+        )
+        
+        # Map name at bottom
+        ax.text(
+            0.98, 0.02, self.map_name,
+            transform=ax.transAxes, color='#666', fontsize=10,
+            ha='right', verticalalignment='bottom'
         )
         
         # Save
-        plt.tight_layout()
-        plt.savefig(output_path, dpi=100, bbox_inches='tight', pad_inches=0, facecolor='#1a1a2e')
+        plt.savefig(output_path, dpi=100, bbox_inches='tight', pad_inches=0.1, facecolor='#1a1a2e')
         plt.close(fig)
         
         return str(output_path)

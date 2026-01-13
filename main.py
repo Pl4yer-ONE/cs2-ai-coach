@@ -318,7 +318,7 @@ def run_analyze(args) -> int:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             heatmap_dir = f"reports/heatmaps/{timestamp}"
             
-            hm = HeatmapGenerator(parsed_demo, output_dir=heatmap_dir, overlay_enabled=False)
+            hm = HeatmapGenerator(parsed_demo, output_dir=heatmap_dir, overlay_enabled=True)
             heatmap_path = hm.generate_kills_heatmap()
             print(f"Heatmap saved: {heatmap_path}")
             
