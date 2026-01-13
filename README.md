@@ -215,15 +215,23 @@ FragAudit/
 
 ## Roadmap
 
-- [x] Mistake detection (dry peek, isolated death)
-- [x] Markdown + JSON reports
-- [x] HTML reports with styling
-- [x] Visual demo player
-- [x] Varied coaching advice
-- [x] Ollama AI integration
-- [ ] Round-by-round timeline
-- [ ] Team-level analysis
-- [ ] Utility usage tracking
+### Completed
+- [x] v3.0 — Mistake detection (dry peek, isolated death)
+- [x] v3.0 — Markdown + JSON reports
+- [x] v3.0 — Visual demo player
+- [x] v3.1 — HTML reports with styling
+- [x] v3.1 — Varied coaching advice (map-specific)
+- [x] v3.1 — Ollama AI integration
+- [x] v3.1.1 — Severity labels (HIGH/MED/LOW)
+- [x] v3.1.1 — CSV export
+
+### Planned
+- [ ] v3.2 — Trade success % per player
+- [ ] v3.2 — Spacing heatmap overlay
+- [ ] v3.3 — Clutch decision scoring
+- [ ] v3.3 — Round-by-round timeline view
+- [ ] v3.4 — Team synergy report
+- [ ] v3.4 — Utility effectiveness tracking
 
 ---
 

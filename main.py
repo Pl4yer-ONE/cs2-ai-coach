@@ -88,6 +88,12 @@ For more information, see README.md
     )
     
     analyze_parser.add_argument(
+        "--csv",
+        action="store_true",
+        help="Generate CSV export (for spreadsheets)"
+    )
+    
+    analyze_parser.add_argument(
         "--player",
         type=str,
         help="Analyze specific player only (by Steam ID or name)"
@@ -298,6 +304,34 @@ def run_analyze(args) -> int:
                 html_filename = None
             html_path = html_gen.save(report, html_filename)
             print(f"HTML report saved: {html_path}")
+        
+        if getattr(args, 'csv', False):
+            import csv
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            if args.output:
+                base = args.output.rsplit('.', 1)[0] if '.' in args.output else args.output
+                csv_filename = f"{base}.csv"
+            else:
+                csv_filename = f"reports/mistakes_{timestamp}.csv"
+            
+            with open(csv_filename, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(['Player', 'Round', 'Time', 'Location', 'Type', 'Severity', 'Details', 'Fix'])
+                for player_id, player_data in report['players'].items():
+                    player_name = player_data.get('player_name') or player_id
+                    for m in player_data.get('mistakes', []):
+                        writer.writerow([
+                            player_name,
+                            m.get('round', ''),
+                            m.get('time', ''),
+                            m.get('location', ''),
+                            m.get('type', ''),
+                            m.get('severity', ''),
+                            m.get('details', ''),
+                            m.get('fix', '')
+                        ])
+            print(f"CSV report saved: {csv_filename}")
         
         # Print summary
         generator.print_summary(report)

@@ -140,7 +140,7 @@ class ReportGenerator:
                     "type": m.mistake_type,
                     "details": m.details,
                     "fix": m.correction,
-                    "severity": f"{int(m.severity * 100)}%"
+                    "severity": m.severity_label  # HIGH, MED, LOW
                 }
                 for m in mistakes
             ],
@@ -242,13 +242,12 @@ class ReportGenerator:
                 lines.append("")
                 for mistake in player_data["mistakes"]:
                     sev = mistake["severity"]
-                    severity_emoji = "🔴" if "8" in sev or "9" in sev else "🟡" if "5" in sev or "6" in sev or "7" in sev else "🟢"
-                    lines.append(f"#### {severity_emoji} Round {mistake['round']} | {mistake['time']} | {mistake['location']}")
+                    severity_emoji = "🔴" if sev == "HIGH" else "🟡" if sev == "MED" else "🟢"
+                    lines.append(f"#### {severity_emoji} [{sev}] Round {mistake['round']} | {mistake['time']} | {mistake['location']}")
                     lines.append("")
                     lines.append(f"**{mistake['type'].replace('_', ' ').title()}**")
                     lines.append(f"- {mistake['details']}")
                     lines.append(f"- **Fix:** {mistake['fix']}")
-                    lines.append(f"- Severity: {mistake['severity']}")
                     lines.append("")
             
             # Feedback
@@ -331,9 +330,9 @@ class ReportGenerator:
             
             if mistakes:
                 for m in mistakes[:2]:  # Show top 2 mistakes
-                    sev = m.get('severity', '50%')
-                    sev_icon = "🔴" if "8" in sev or "9" in sev else "🟡" if "5" in sev or "6" in sev or "7" in sev else "🟢"
-                    print(f"    {sev_icon} R{m.get('round', '?')} {m.get('time', '')} — {m.get('type', '').replace('_', ' ')}")
+                    sev = m.get('severity', 'MED')
+                    sev_icon = "🔴" if sev == "HIGH" else "🟡" if sev == "MED" else "🟢"
+                    print(f"    {sev_icon} [{sev}] R{m.get('round', '?')} {m.get('time', '')} — {m.get('type', '').replace('_', ' ')}")
             else:
                 print(f"    {GREEN}✓ No issues detected{RESET}")
         

@@ -20,8 +20,18 @@ class ClassifiedMistake:
     player_name: str
     mistake_type: str
     details: str
-    severity: float
+    severity: float  # 0.0-1.0
+    severity_label: str  # HIGH, MED, LOW
     correction: str
+
+
+def _get_severity_label(severity: float) -> str:
+    """Convert severity float to label."""
+    if severity >= 0.8:
+        return "HIGH"
+    elif severity >= 0.5:
+        return "MED"
+    return "LOW"
 
 
 # Varied advice templates
@@ -146,6 +156,7 @@ class MistakeClassifier:
                         mistake_type="untradeable_death",
                         details=f"Died {dist}u from nearest teammate — no trade possible",
                         severity=0.85,
+                        severity_label=_get_severity_label(0.85),
                         correction=_get_untradeable_advice(is_entry)
                     ))
 
@@ -160,6 +171,7 @@ class MistakeClassifier:
                     mistake_type="dry_peek_awp",
                     details=f"Dry peeked into AWP at {map_area}",
                     severity=0.95,
+                    severity_label=_get_severity_label(0.95),
                     correction=random.choice(AWP_PEEK_ADVICE)
                 ))
                 
@@ -174,6 +186,7 @@ class MistakeClassifier:
                     mistake_type="dry_peek",
                     details=f"Challenged {map_area} without utility",
                     severity=0.70,
+                    severity_label=_get_severity_label(0.70),
                     correction=_get_dry_peek_advice(map_area)
                 ))
 
@@ -188,6 +201,7 @@ class MistakeClassifier:
                     mistake_type="bad_spacing",
                     details=f"Died stacked with {death.teammates_nearby} teammates at {map_area}",
                     severity=0.65,
+                    severity_label=_get_severity_label(0.65),
                     correction=random.choice(SPACING_ADVICE)
                 ))
             
@@ -203,6 +217,7 @@ class MistakeClassifier:
                     mistake_type="solo_late_round",
                     details=f"Died {dist}u from team in late round at {map_area}",
                     severity=0.75,
+                    severity_label=_get_severity_label(0.75),
                     correction=random.choice(SOLO_LATE_ADVICE)
                 ))
 
@@ -222,6 +237,7 @@ class MistakeClassifier:
                 mistake_type="low_utility_usage",
                 details=f"Only {features.flashes_thrown} flashes thrown in {features.rounds_played} rounds",
                 severity=0.50,
+                severity_label=_get_severity_label(0.50),
                 correction="Support players should average 1+ flash per round"
             ))
         return mistakes

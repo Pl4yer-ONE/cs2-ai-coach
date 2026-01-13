@@ -49,11 +49,13 @@ class HTMLReporter:
             mistakes_html = ""
             if mistakes:
                 for m in mistakes:
+                    sev = m.get('severity', 'MED')
+                    sev_class = 'severity-high' if sev == 'HIGH' else 'severity-med' if sev == 'MED' else 'severity-low'
                     mistakes_html += f'''
                 <div class="mistake">
                     <div class="mistake-header">
                         <span class="mistake-context">Round {m.get('round', '?')} • {m.get('time', '?')} • {m.get('location', 'Unknown')}</span>
-                        <span class="severity">{m.get('severity', '50%')}</span>
+                        <span class="severity {sev_class}">{sev}</span>
                     </div>
                     <div class="mistake-type">{m.get('type', 'unknown').replace('_', ' ').title()}</div>
                     <div>{m.get('details', '')}</div>
@@ -156,7 +158,10 @@ class HTMLReporter:
         .mistake-context {{ color: #888; font-size: 0.85rem; }}
         .mistake-type {{ color: #ff6b35; font-weight: bold; }}
         .mistake-fix {{ color: #4ecdc4; margin-top: 0.5rem; font-size: 0.9rem; }}
-        .severity {{ background: rgba(255, 107, 53, 0.2); padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.8rem; }}
+        .severity {{ background: rgba(255, 107, 53, 0.2); padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }}
+        .severity-high {{ background: rgba(255, 68, 68, 0.3); color: #ff4444; }}
+        .severity-med {{ background: rgba(255, 170, 0, 0.3); color: #ffaa00; }}
+        .severity-low {{ background: rgba(68, 255, 68, 0.3); color: #44ff44; }}
         
         .no-issues {{ color: #4ecdc4; padding: 0.5rem 0; }}
         
