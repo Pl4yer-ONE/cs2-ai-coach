@@ -219,7 +219,7 @@ FragAudit/
 - [x] v3.2.1 — Smoke circles, flash radius, kill markers in radar
 
 ### Planned
-- [ ] v3.3 — Player trails, round timeline view
+- [ ] v3.3 — Round timeline visualization
 - [ ] v3.4 — Team synergy report, multi-demo analysis
 
 ---
@@ -230,6 +230,8 @@ FragAudit/
 2. Map callouts may show "Unknown" for unmapped coordinates
 3. Flash detection covers teammate flashes only
 4. Role classification is heuristic-based
+5. Radar replay covers first ~20 minutes (5000 frames) by default
+6. Smoke/Flash durations are visually approximated
 
 See [TECHNICAL.md](docs/TECHNICAL.md) for details.
 
