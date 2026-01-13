@@ -14,16 +14,70 @@
 
 ---
 
+## Architecture
+
+<div align="center">
+
+![System Architecture](docs/architecture.png)
+
+</div>
+
+---
+
 ## What It Does
 
 FragAudit reads CS2 demo files and identifies common positioning mistakes:
 
-- **Dry peeks** — Challenging angles without flash support
-- **Isolated deaths** — Dying too far from teammates to be traded
-- **Bad spacing** — Stacking on teammates
-- **Late-round solo plays** — Dying alone when you should group up
+| Mistake Type | What It Detects | Severity |
+|--------------|-----------------|----------|
+| `dry_peek` | Challenged angle without flash support | MED |
+| `dry_peek_awp` | Dry peeked into AWP | HIGH |
+| `untradeable_death` | Died >400u from teammates | HIGH |
+| `bad_spacing` | Stacked on 2+ teammates | MED |
+| `solo_late_round` | Died alone in late round | MED |
 
-It generates reports showing exactly when and where mistakes happened.
+---
+
+## Key Metric: Trade Potential Score
+
+**Trade Score** = Percentage of deaths where a teammate was positioned to trade.
+
+| Score | Interpretation |
+|-------|----------------|
+| 60-100% | Good positioning — deaths are tradeable |
+| 30-59% | Average — some positioning issues |
+| 0-29% | Poor — frequently dying alone |
+
+---
+
+## Screenshots
+
+### Report Overview
+<div align="center">
+
+![Report Overview](docs/report_overview.png)
+
+*Issue distribution and match summary*
+
+</div>
+
+### Player Cards
+<div align="center">
+
+![Player Cards](docs/report_players.png)
+
+*Individual player stats with Trade Score and mistake details*
+
+</div>
+
+### Demo Player
+<div align="center">
+
+![Demo Player](docs/demo_player.png)
+
+*Visual playback without CS2 installed*
+
+</div>
 
 ---
 
@@ -35,16 +89,6 @@ Also useful for:
 - Coaches analyzing team VODs
 - Analysts building match reports
 - Developers building on demo parsing
-
----
-
-## What It Doesn't Do
-
-- ❌ Not a replacement for watching demos
-- ❌ No AI coaching or natural language advice (unless you enable Ollama)
-- ❌ Won't tell you about crosshair placement or aim
-- ❌ Can't detect utility usage quality (yet)
-- ❌ Rule-based, not ML — it follows heuristics, not magic
 
 ---
 
@@ -67,33 +111,35 @@ python main.py check-parsers
 
 ## Usage
 
-### Analyze a demo
+### Basic Analysis
 ```bash
-python main.py analyze --demo match/your-demo.dem
+python main.py analyze --demo match.dem
 ```
 
-### Generate HTML report (shareable)
+### Generate Reports
 ```bash
-python main.py analyze --demo match.dem --html
+python main.py analyze --demo match.dem --html      # HTML report
+python main.py analyze --demo match.dem --markdown  # Markdown
+python main.py analyze --demo match.dem --csv       # CSV export
 ```
 
-### Enable AI coaching advice (requires Ollama)
+### AI Coaching (Optional)
 ```bash
 python main.py analyze --demo match.dem --ollama --html
 ```
 
-### Watch demo visually
-```bash
-python main.py play match.dem
+**Example AI Output:**
 ```
+Input:
+  dry_peek in Round 7 at A Long
 
-📖 **Full guide:** [docs/USAGE.md](docs/USAGE.md)
+Output:
+  "You challenged A Long without utility — ask for a long flash from CT spawn next time."
+```
 
 ---
 
 ## Sample Output
-
-Real output from analyzing `phoenix-vs-rave-m3-ancient.dem`:
 
 ```
 ════════════════════════════════════════════════════════════
@@ -101,103 +147,37 @@ Real output from analyzing `phoenix-vs-rave-m3-ancient.dem`:
 ════════════════════════════════════════════════════════════
 
   Map: de_ancient
-  Demo: match/phoenix-vs-rave-m3-ancient.dem
-
   Players: 10    Issues: 7
-
-  Issue Types:
-    dry peek             ███████░░░ 7
 
 ────────────────────────────────────────────────────────────
   PLAYER BREAKDOWN
 ────────────────────────────────────────────────────────────
 
   MarKE
-    K/D: 2.5  HS: 66.7%  Role: Trader
+    K/D: 2.5  HS: 66.7%  Trade: 50%  Role: Trader
     ✓ No issues detected
 
-  jchancE
-    K/D: 0.53  HS: 62.5%  Role: Trader
-    🟡 R0 0:30 — dry peek
-    🟡 R0 0:30 — dry peek
+  Gabe
+    K/D: 0.67  HS: 30.0%  Trade: 13%  Role: Trader
+    🟡 [MED] R0 0:30 — dry peek
 
-  junior
-    K/D: 2.11  HS: 42.1%  Role: AWPer
-    ✓ No issues detected
+  Valter0k
+    K/D: 0.47  HS: 71.4%  Trade: 6%  Role: Rotator
+    🟡 [MED] R0 0:30 — dry peek
 
 ════════════════════════════════════════════════════════════
 ```
 
 ---
 
-## HTML Reports
+## Documentation
 
-Generate shareable HTML reports with `--html`:
-
-<div align="center">
-
-![HTML Report](docs/html_report.png)
-
-</div>
-
-Features:
-- Player cards with K/D, HS%, ADR, Role
-- Mistake breakdown per player
-- Varied coaching advice (map-specific)
-- Dark theme, mobile responsive
-
----
-
-## Demo Player
-
-Visual playback without CS2 installed.
-
-<div align="center">
-
-![Demo Player](docs/demo_player.png)
-
-</div>
-
-| Key | Action |
-|-----|--------|
-| Space | Play/Pause |
-| ← / → | Seek 5 sec |
-| ↑ / ↓ | Prev/Next round |
-| + / - | Speed |
-| ESC | Quit |
-
----
-
-## Mistake Detection
-
-| Type | Trigger | Severity |
-|------|---------|----------|
-| `dry_peek` | Peeked without flash support | MED |
-| `dry_peek_awp` | Dry peeked into AWP | HIGH |
-| `untradeable_death` | Died >400u from teammates | HIGH |
-| `bad_spacing` | Stacked on 2+ teammates | MED |
-| `solo_late_round` | Died alone in late round | MED |
-
----
-
-## AI Coaching (Optional)
-
-Enable Ollama for natural language advice:
-
-```bash
-python main.py analyze --demo match.dem --ollama --html
-```
-
-**Example:**
-```
-Input:
-  dry_peek in Round 7 at A Long
-
-AI Output:
-  "You challenged A Long without utility — ask for a long flash from CT spawn next time."
-```
-
-Without Ollama, you get varied template-based advice (map-specific, context-aware).
+| Document | Description |
+|----------|-------------|
+| [USAGE.md](docs/USAGE.md) | Step-by-step usage guide |
+| [TECHNICAL.md](docs/TECHNICAL.md) | Algorithms, data structures, architecture |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guidelines |
+| [CHANGELOG.md](CHANGELOG.md) | Version history |
 
 ---
 
@@ -212,10 +192,10 @@ FragAudit/
 │   ├── classifier/      # Mistake detection rules
 │   ├── report/          # JSON/Markdown/HTML output
 │   ├── nlp/             # Ollama integration
-│   └── player/          # Visual demo player
+│   └── maps/            # Coordinate → callout mapping
 ├── tests/               # 26 unit tests
 ├── match/               # Demo files
-└── docs/                # Documentation
+└── docs/                # Technical documentation
 ```
 
 ---
@@ -223,22 +203,25 @@ FragAudit/
 ## Roadmap
 
 ### Completed
-- [x] v3.0 — Mistake detection (dry peek, isolated death)
-- [x] v3.0 — Markdown + JSON reports
-- [x] v3.0 — Visual demo player
-- [x] v3.1 — HTML reports with styling
-- [x] v3.1 — Varied coaching advice (map-specific)
-- [x] v3.1 — Ollama AI integration
-- [x] v3.1.1 — Severity labels (HIGH/MED/LOW)
-- [x] v3.1.1 — CSV export
+- [x] v3.0 — Mistake detection, JSON/Markdown reports, demo player
+- [x] v3.1 — HTML reports, Ollama AI, severity labels
+- [x] v3.1.1 — Trade Potential Score, CSV export
 
 ### Planned
-- [ ] v3.2 — Trade success % per player
 - [ ] v3.2 — Spacing heatmap overlay
-- [ ] v3.3 — Clutch decision scoring
 - [ ] v3.3 — Round-by-round timeline view
 - [ ] v3.4 — Team synergy report
-- [ ] v3.4 — Utility effectiveness tracking
+
+---
+
+## Limitations
+
+1. Round timing is approximated from tick offset
+2. Map callouts may show "Unknown" for unmapped coordinates
+3. Flash detection covers teammate flashes only
+4. Role classification is heuristic-based
+
+See [TECHNICAL.md](docs/TECHNICAL.md) for details.
 
 ---
 
@@ -247,7 +230,6 @@ FragAudit/
 MIT licensed — contributions welcome.
 
 ```bash
-# Run tests
 python -m pytest tests/ -v
 ```
 
