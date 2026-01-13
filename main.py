@@ -372,12 +372,12 @@ def run_analyze(args) -> int:
             else:
                 print("Generating radar replay...")
                 
-                # Extract ticks: 64 tick demo / 32 interval = 2 frames per second of game
-                # For 20 FPS output, 10 seconds of game = 1 second of video
-                # Slower, more detailed videos with visible player trails
+                # Extract ticks: 64 tick demo / 16 interval = 4 frames per second of game
+                # For 20 FPS output, 5 seconds of game = 1 second of video (5x speed)
+                # Very smooth, detailed replay
                 fps = getattr(args, 'radar_fps', 20)
-                tick_interval = 32  # 2 samples per second of game time (smoother)
-                max_frames = 3000   # Limit to ~150 sec video at 20fps
+                tick_interval = 16  # 4 samples per second of game time
+                max_frames = 5000   # Limit to ~250 sec video at 20fps (covering ~20 mins of game)
                 frames = extract_ticks(parsed_demo, tick_interval=tick_interval, max_ticks=max_frames)
                 
                 if frames:
