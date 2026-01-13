@@ -112,18 +112,18 @@ class OllamaPhrasing:
             player_name: Player name for personalization
             
         Returns:
-            List of dicts with category and feedback
+            List of dicts with type and feedback
         """
         results = []
         
         for mistake in mistakes:
             feedback = self.phrase_mistake(mistake, player_name)
             results.append({
-                "category": mistake.category,
-                "subcategory": mistake.subcategory,
+                "type": mistake.mistake_type,
+                "location": mistake.map_area,
+                "round": mistake.round_num,
                 "feedback": feedback,
-                "severity": mistake.severity,
-                "confidence": mistake.confidence
+                "severity": f"{int(mistake.severity * 100)}%"
             })
         
         return results
@@ -134,22 +134,21 @@ class OllamaPhrasing:
         player_name: str
     ) -> str:
         """Build the prompt for Ollama."""
-        return f"""You are a CS2 coach. Convert this classified mistake into ONE concise coaching sentence for the player.
+        return f"""You are a CS2 coach. Convert this mistake into ONE concise coaching sentence.
 
-MISTAKE DATA (this is determined by analysis, not for you to change):
-- Category: {mistake.category}
-- Subcategory: {mistake.subcategory}
-- Severity: {mistake.severity}
-- Current Value: {mistake.current_value}
-- Target Value: {mistake.target_value}
-- Evidence: {json.dumps(mistake.evidence_metrics)}
+MISTAKE:
+- Type: {mistake.mistake_type}
+- Details: {mistake.details}
+- Location: {mistake.map_area}
+- Round: {mistake.round_num}
+- Severity: {int(mistake.severity * 100)}%
+- Default Fix: {mistake.correction}
 
 RULES:
 1. Give ONE sentence of specific, actionable feedback
-2. Do NOT question or change the classification
-3. Be direct and constructive
-4. Reference specific numbers when helpful
-5. Player name is {player_name}
+2. Be direct and constructive
+3. Reference the specific map area when relevant
+4. Player name is {player_name}
 
 Respond with ONLY the coaching feedback sentence:"""
     
@@ -180,17 +179,8 @@ Respond with ONLY the coaching feedback sentence:"""
     
     def _get_fallback_message(self, mistake: ClassifiedMistake) -> str:
         """Get fallback message when Ollama is unavailable."""
-        category_messages = FALLBACK_MESSAGES.get(mistake.category, {})
-        message = category_messages.get(
-            mistake.feedback_key,
-            f"Focus on improving your {mistake.subcategory.replace('_', ' ')}."
-        )
-        
-        # Add current value context
-        if mistake.current_value:
-            message += f" (Current: {mistake.current_value}, Target: {mistake.target_value})"
-        
-        return message
+        # Use the correction from the classifier directly
+        return mistake.correction
     
     def generate_summary(
         self,
@@ -215,7 +205,7 @@ Respond with ONLY the coaching feedback sentence:"""
         
         # Build summary prompt
         mistake_list = "\n".join([
-            f"- {m.category}/{m.subcategory}: {m.severity} severity, {m.current_value} vs target {m.target_value}"
+            f"- {m.mistake_type} at {m.map_area}: {int(m.severity * 100)}% severity"
             for m in mistakes[:5]  # Limit to top 5
         ])
         
@@ -245,21 +235,21 @@ Write a constructive summary focusing on the most impactful improvements:"""
         if not mistakes:
             return f"{player_name} played well with no significant improvement areas identified."
         
-        # Group by category
-        categories = {}
+        # Group by mistake type
+        types = {}
         for mistake in mistakes:
-            if mistake.category not in categories:
-                categories[mistake.category] = []
-            categories[mistake.category].append(mistake)
+            if mistake.mistake_type not in types:
+                types[mistake.mistake_type] = []
+            types[mistake.mistake_type].append(mistake)
         
         # Build summary
         parts = [f"{player_name}'s main improvement areas:"]
         
-        for category, cat_mistakes in categories.items():
-            high_severity = [m for m in cat_mistakes if m.severity == "high"]
+        for mtype, type_mistakes in types.items():
+            high_severity = [m for m in type_mistakes if m.severity >= 0.8]
             if high_severity:
-                parts.append(f"- {category}: Focus on {high_severity[0].subcategory.replace('_', ' ')}")
-            elif cat_mistakes:
-                parts.append(f"- {category}: Minor improvements needed")
+                parts.append(f"- {mtype.replace('_', ' ')}: Critical (found {len(type_mistakes)}x)")
+            elif type_mistakes:
+                parts.append(f"- {mtype.replace('_', ' ')}: {len(type_mistakes)} instances")
         
         return " ".join(parts)
