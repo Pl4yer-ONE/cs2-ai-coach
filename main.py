@@ -423,11 +423,13 @@ def run_analyze(args) -> int:
                 <button onclick="document.getElementById('radarVideo').playbackRate = 2" style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #4ecdc4; background: transparent; color: #4ecdc4; cursor: pointer;">2x</button>
                 <button onclick="document.getElementById('radarVideo').playbackRate = 4" style="padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid #4ecdc4; background: transparent; color: #4ecdc4; cursor: pointer;">4x</button>
             </div>
-            <div style="margin-top: 1rem; display: flex; justify-content: center; gap: 2rem; font-size: 0.85rem; color: #888;">
+            <div style="margin-top: 1rem; display: flex; justify-content: center; gap: 2rem; font-size: 0.85rem; color: #888; flex-wrap: wrap;">
                 <span><span style="display: inline-block; width: 12px; height: 12px; background: #5C7AEA; border-radius: 50%; margin-right: 4px;"></span> CT</span>
                 <span><span style="display: inline-block; width: 12px; height: 12px; background: #E94560; border-radius: 50%; margin-right: 4px;"></span> T</span>
                 <span><span style="display: inline-block; width: 12px; height: 12px; background: #FFD93D; margin-right: 4px;"></span> Bomb</span>
                 <span><span style="display: inline-block; width: 12px; height: 12px; background: #AAAAAA; border-radius: 50%; margin-right: 4px; opacity: 0.5;"></span> Smoke</span>
+                <span><span style="display: inline-block; width: 12px; height: 12px; background: #FFFFFF; border-radius: 50%; margin-right: 4px; opacity: 0.6;"></span> Flash</span>
+                <span style="color: #E94560;">✕ Kill</span>
             </div>
             <p style="color: #888; margin-top: 0.5rem;">Player movement replay for {parsed_demo.map_name}</p>
         </div>

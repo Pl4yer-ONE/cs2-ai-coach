@@ -13,7 +13,8 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 from PIL import Image
 
-from src.radar.extractor import TickFrame, PlayerFrame, SmokeFrame
+
+from src.radar.extractor import TickFrame, PlayerFrame, SmokeFrame, FlashFrame, KillFrame
 from src.visualization.map_coords import world_to_radar, load_map_registry
 
 
@@ -22,9 +23,12 @@ CT_COLOR = '#5C7AEA'      # Blue
 T_COLOR = '#E94560'       # Red  
 BOMB_COLOR = '#FFD93D'    # Yellow
 SMOKE_COLOR = '#AAAAAA'   # Gray
+FLASH_COLOR = '#FFFFFF'   # White flash
+KILL_COLOR = '#FF0000'    # Red for kill marker
 DEAD_ALPHA = 0.25
 ALIVE_ALPHA = 0.9
 SMOKE_RADIUS = 30         # Radar pixels (~144 units in-game)
+FLASH_RADIUS = 40         # Flash effect radius
 
 
 class RadarRenderer:
@@ -86,6 +90,14 @@ class RadarRenderer:
         # Draw smokes first (below players)
         for smoke in frame.smokes:
             self._draw_smoke(ax, smoke, frame.tick)
+        
+        # Draw flashes (bright circle effect)
+        for flash in frame.flashes:
+            self._draw_flash(ax, flash, frame.tick)
+        
+        # Draw kills (skull markers)
+        for kill in frame.kills:
+            self._draw_kill(ax, kill, frame.tick)
         
         # Draw players
         for player in frame.players:
@@ -221,6 +233,65 @@ class RadarRenderer:
             zorder=3
         )
         ax.add_patch(circle)
+    
+    def _draw_flash(self, ax, flash: FlashFrame, current_tick: int):
+        """Draw a flash grenade effect (white circle)."""
+        fx, fy = world_to_radar(
+            np.array([flash.x]),
+            np.array([flash.y]),
+            self.map_config,
+            self.resolution
+        )
+        
+        if len(fx) == 0 or len(fy) == 0:
+            return
+        fx, fy = fx[0], fy[0]
+        
+        if fx < 0 or fx > self.resolution or fy < 0 or fy > self.resolution:
+            return
+        
+        # Fade out quickly
+        age = current_tick - flash.tick
+        alpha = max(0.1, 0.6 * (1 - age / flash.duration_ticks))
+        
+        # Draw flash circle
+        circle = Circle(
+            (fx, fy), 
+            FLASH_RADIUS,
+            facecolor=FLASH_COLOR,
+            edgecolor='#FFFF00',
+            alpha=alpha,
+            linewidth=2,
+            zorder=4
+        )
+        ax.add_patch(circle)
+    
+    def _draw_kill(self, ax, kill: KillFrame, current_tick: int):
+        """Draw a kill marker (skull/X at death location)."""
+        kx, ky = world_to_radar(
+            np.array([kill.x]),
+            np.array([kill.y]),
+            self.map_config,
+            self.resolution
+        )
+        
+        if len(kx) == 0 or len(ky) == 0:
+            return
+        kx, ky = kx[0], ky[0]
+        
+        if kx < 0 or kx > self.resolution or ky < 0 or ky > self.resolution:
+            return
+        
+        # Fade out over duration
+        age = current_tick - kill.tick
+        alpha = max(0.2, 1.0 * (1 - age / kill.duration_ticks))
+        
+        # Color based on who got the kill (CT kill = blue X, T kill = red X)
+        color = CT_COLOR if kill.attacker_team == 'CT' else T_COLOR
+        
+        # Draw skull marker (X with circle)
+        ax.scatter(kx, ky, marker='x', c=color, s=150, alpha=alpha, linewidth=3, zorder=8)
+        ax.scatter(kx, ky, marker='o', c='white', s=80, alpha=alpha * 0.3, zorder=7)
     
     def render_all(self, frames: List[TickFrame], progress_interval: int = 100) -> List[str]:
         """

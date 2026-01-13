@@ -34,6 +34,26 @@ class SmokeFrame:
 
 
 @dataclass
+class FlashFrame:
+    """Flash grenade detonation."""
+    x: float
+    y: float
+    tick: int
+    duration_ticks: int = 128  # ~2 seconds visible
+
+
+@dataclass
+class KillFrame:
+    """Kill event for marker."""
+    x: float
+    y: float
+    tick: int
+    attacker_team: str
+    victim_name: str
+    duration_ticks: int = 192  # ~3 seconds visible
+
+
+@dataclass
 class TickFrame:
     """All player states at a single tick."""
     tick: int
@@ -41,11 +61,17 @@ class TickFrame:
     bomb_x: Optional[float] = None
     bomb_y: Optional[float] = None
     smokes: List[SmokeFrame] = None
+    flashes: List[FlashFrame] = None
+    kills: List[KillFrame] = None
     round_num: int = 0
     
     def __post_init__(self):
         if self.smokes is None:
             self.smokes = []
+        if self.flashes is None:
+            self.flashes = []
+        if self.kills is None:
+            self.kills = []
 
 
 def extract_ticks(
@@ -87,15 +113,45 @@ def extract_ticks(
     
     # Extract smoke detonations for overlay
     smoke_events = []
+    flash_events = []
     grenades = demo.grenades
     if grenades is not None and not grenades.empty:
-        smoke_df = grenades[grenades.get('grenade_type', pd.Series()) == 'smoke']
-        for _, row in smoke_df.iterrows():
-            x = float(row.get('X', row.get('x', 0)))
-            y = float(row.get('Y', row.get('y', 0)))
+        # Smokes
+        if 'grenade_type' in grenades.columns:
+            smoke_df = grenades[grenades['grenade_type'] == 'smoke']
+            for _, row in smoke_df.iterrows():
+                x = float(row.get('X', row.get('x', 0)))
+                y = float(row.get('Y', row.get('y', 0)))
+                tick = int(row.get('tick', 0))
+                if x != 0 and y != 0:
+                    smoke_events.append(SmokeFrame(x=x, y=y, tick_start=tick))
+            
+            # Flashes
+            flash_df = grenades[grenades['grenade_type'] == 'flashbang']
+            for _, row in flash_df.iterrows():
+                x = float(row.get('X', row.get('x', 0)))
+                y = float(row.get('Y', row.get('y', 0)))
+                tick = int(row.get('tick', 0))
+                if x != 0 and y != 0:
+                    flash_events.append(FlashFrame(x=x, y=y, tick=tick))
+    
+    # Extract kills for markers
+    kill_events = []
+    kills = demo.kills
+    if kills is not None and not kills.empty:
+        for _, row in kills.iterrows():
+            # Get victim position (where the kill happened)
+            x = float(row.get('victim_X', row.get('X', 0)))
+            y = float(row.get('victim_Y', row.get('Y', 0)))
             tick = int(row.get('tick', 0))
+            attacker_team = str(row.get('attacker_team_name', 'T')).upper()
+            victim_name = str(row.get('victim_name', ''))[:10]
             if x != 0 and y != 0:
-                smoke_events.append(SmokeFrame(x=x, y=y, tick_start=tick))
+                kill_events.append(KillFrame(
+                    x=x, y=y, tick=tick,
+                    attacker_team='CT' if 'CT' in attacker_team else 'T',
+                    victim_name=victim_name
+                ))
     
     frames = []
     
@@ -148,10 +204,24 @@ def extract_ticks(
                 if s.tick_start <= tick <= s.tick_start + s.duration_ticks
             ]
             
+            # Find active flashes at this tick
+            active_flashes = [
+                f for f in flash_events
+                if f.tick <= tick <= f.tick + f.duration_ticks
+            ]
+            
+            # Find recent kills at this tick (show skull briefly)
+            active_kills = [
+                k for k in kill_events
+                if k.tick <= tick <= k.tick + k.duration_ticks
+            ]
+            
             frames.append(TickFrame(
                 tick=tick,
                 players=players,
                 smokes=active_smokes,
+                flashes=active_flashes,
+                kills=active_kills,
                 round_num=0
             ))
     
