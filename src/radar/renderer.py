@@ -1,15 +1,17 @@
 # Copyright (c) 2026 Pl4yer-ONE
 # This file is part of FragAudit.
-# Licensed under GPLv3 or commercial license.
+# Licensed under GPLv3.
 
 """
 Radar Frame Renderer
 Renders player positions on map radar as PNG frames.
+Uses boltobserv radar images (GPL-3) from https://github.com/boltgolt/boltobserv
 """
 
 import os
+import json
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Tuple, Union
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -21,6 +23,66 @@ from PIL import Image
 
 from src.radar.extractor import TickFrame, PlayerFrame, SmokeFrame, FlashFrame, KillFrame, GrenadeFrame
 from src.visualization.map_coords import world_to_radar, load_map_registry
+
+
+# Boltobserv config cache
+_boltobserv_config: Optional[Dict] = None
+
+
+def load_boltobserv_config() -> Dict:
+    """Load boltobserv map coordinate configs."""
+    global _boltobserv_config
+    if _boltobserv_config is None:
+        config_path = Path(__file__).parent / "boltobserv_maps" / "config.json"
+        if config_path.exists():
+            with open(config_path) as f:
+                _boltobserv_config = json.load(f)
+        else:
+            _boltobserv_config = {}
+    return _boltobserv_config
+
+
+def boltobserv_to_radar(
+    x: Union[float, np.ndarray],
+    y: Union[float, np.ndarray],
+    map_name: str,
+    img_size: int = 1024
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Convert CS2 world coordinates to radar pixels using boltobserv formula.
+    
+    Boltobserv formula:
+        px = (world_x + offset_x) / resolution
+        py = (offset_y - world_y) / resolution  # Y is inverted
+    
+    Returns pixel coordinates for the 1024x1024 boltobserv radar.
+    """
+    config = load_boltobserv_config()
+    map_cfg = config.get(map_name, {})
+    
+    if not map_cfg:
+        # Fallback to zeros if no config
+        return np.zeros_like(x), np.zeros_like(y)
+    
+    x = np.asarray(x, dtype=np.float64)
+    y = np.asarray(y, dtype=np.float64)
+    
+    offset_x = map_cfg.get("offset_x", 0)
+    offset_y = map_cfg.get("offset_y", 0)
+    resolution = map_cfg.get("resolution", 1.0)  # Units per pixel
+    
+    # Boltobserv coordinate transform
+    # Y is inverted (positive Y goes up in-game, down on radar)
+    pixel_x = (x + offset_x) / resolution
+    pixel_y = (offset_y - y) / resolution
+    
+    # Scale if radar image is not 1024
+    if img_size != 1024:
+        scale = img_size / 1024.0
+        pixel_x *= scale
+        pixel_y *= scale
+    
+    return pixel_x, pixel_y
 
 
 # Colors
@@ -59,12 +121,30 @@ class RadarRenderer:
         self.player_size = player_size
         self.show_names = show_names
         
-        # Load map config
+        # Check if boltobserv map is available
+        boltobserv_config = load_boltobserv_config()
+        self.use_boltobserv = map_name in boltobserv_config
+        
+        # Load map config (fallback for non-boltobserv)
         self._registry = load_map_registry()
         self.map_config = self._registry.get(map_name)
         
         # Load map image
         self.map_image = self._load_map_image()
+    
+    def _convert_coords(
+        self,
+        x: Union[float, np.ndarray],
+        y: Union[float, np.ndarray]
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Convert world coordinates to radar pixels using appropriate method."""
+        if self.use_boltobserv:
+            return boltobserv_to_radar(x, y, self.map_name, self.resolution)
+        else:
+            return world_to_radar(
+                np.asarray(x), np.asarray(y), 
+                self.map_config, self.resolution
+            )
         
     def _load_map_image(self) -> Optional[Image.Image]:
         """Load radar map image. Prioritizes boltobserv assets (GPL-3)."""
@@ -141,11 +221,9 @@ class RadarRenderer:
         
         # Draw bomb
         if frame.bomb_x is not None and frame.bomb_y is not None:
-            bx, by = world_to_radar(
+            bx, by = self._convert_coords(
                 np.array([frame.bomb_x]),
-                np.array([frame.bomb_y]),
-                self.map_config,
-                self.resolution
+                np.array([frame.bomb_y])
             )
             ax.scatter(bx, by, c=BOMB_COLOR, s=self.player_size * 8, 
                       marker='s', zorder=10, edgecolors='black', linewidth=1)
@@ -185,11 +263,9 @@ class RadarRenderer:
     def _draw_player(self, ax, player: PlayerFrame):
         """Draw a single player on the map."""
         # Convert world coords to radar coords
-        px, py = world_to_radar(
+        px, py = self._convert_coords(
             np.array([player.x]),
-            np.array([player.y]),
-            self.map_config,
-            self.resolution
+            np.array([player.y])
         )
         
         if len(px) == 0 or len(py) == 0:
@@ -233,11 +309,9 @@ class RadarRenderer:
     def _draw_smoke(self, ax, smoke: SmokeFrame, current_tick: int):
         """Draw a smoke grenade circle on the map."""
         # Convert world coords to radar coords
-        sx, sy = world_to_radar(
+        sx, sy = self._convert_coords(
             np.array([smoke.x]),
-            np.array([smoke.y]),
-            self.map_config,
-            self.resolution
+            np.array([smoke.y])
         )
         
         if len(sx) == 0 or len(sy) == 0:
@@ -274,11 +348,9 @@ class RadarRenderer:
     
     def _draw_flash(self, ax, flash: FlashFrame, current_tick: int):
         """Draw a flash grenade effect (white circle)."""
-        fx, fy = world_to_radar(
+        fx, fy = self._convert_coords(
             np.array([flash.x]),
-            np.array([flash.y]),
-            self.map_config,
-            self.resolution
+            np.array([flash.y])
         )
         
         if len(fx) == 0 or len(fy) == 0:
@@ -306,11 +378,9 @@ class RadarRenderer:
     
     def _draw_kill(self, ax, kill: KillFrame, current_tick: int):
         """Draw a kill marker (skull/X at death location)."""
-        kx, ky = world_to_radar(
+        kx, ky = self._convert_coords(
             np.array([kill.x]),
-            np.array([kill.y]),
-            self.map_config,
-            self.resolution
+            np.array([kill.y])
         )
         
         if len(kx) == 0 or len(ky) == 0:
@@ -333,11 +403,9 @@ class RadarRenderer:
     
     def _draw_grenade(self, ax, grenade: GrenadeFrame, current_tick: int):
         """Draw an HE grenade or molotov."""
-        gx, gy = world_to_radar(
+        gx, gy = self._convert_coords(
             np.array([grenade.x]),
-            np.array([grenade.y]),
-            self.map_config,
-            self.resolution
+            np.array([grenade.y])
         )
         
         if len(gx) == 0 or len(gy) == 0:
@@ -380,11 +448,9 @@ class RadarRenderer:
         # Convert all positions to radar coords
         radar_positions = []
         for wx, wy in positions:
-            rx, ry = world_to_radar(
+            rx, ry = self._convert_coords(
                 np.array([wx]),
-                np.array([wy]),
-                self.map_config,
-                self.resolution
+                np.array([wy])
             )
             if len(rx) > 0 and len(ry) > 0:
                 radar_positions.append((rx[0], ry[0]))
