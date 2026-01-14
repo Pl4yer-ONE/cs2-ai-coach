@@ -88,12 +88,19 @@ class RadarRenderer:
         Returns:
             Path to saved frame PNG
         """
-        fig, ax = plt.subplots(figsize=(10.24, 10.24), dpi=100)
+        # Use resolution-based figsize for pixel-perfect output
+        dpi = 100
+        fig_size = self.resolution / dpi
+        fig, ax = plt.subplots(figsize=(fig_size, fig_size), dpi=dpi)
         fig.patch.set_facecolor('#1a1a2e')
         
-        # Draw map background
+        # Remove all margins for exact pixel alignment
+        plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+        
+        # Draw map background with exact extent matching axes
         if self.map_image:
-            ax.imshow(self.map_image, extent=[0, self.resolution, self.resolution, 0], zorder=1)
+            ax.imshow(self.map_image, extent=[0, self.resolution, self.resolution, 0], 
+                     zorder=1, aspect='equal')
         else:
             ax.set_facecolor('#16213e')
         
@@ -133,9 +140,10 @@ class RadarRenderer:
             ax.scatter(bx, by, c=BOMB_COLOR, s=self.player_size * 8, 
                       marker='s', zorder=10, edgecolors='black', linewidth=1)
         
-        # Clean up axes
+        # Set exact axes limits for alignment
         ax.set_xlim(0, self.resolution)
         ax.set_ylim(self.resolution, 0)  # Flip Y
+        ax.set_aspect('equal', adjustable='box')
         ax.axis('off')
         
         # Add tick counter
@@ -156,9 +164,10 @@ class RadarRenderer:
             bbox=dict(facecolor='black', alpha=0.5, edgecolor='none', pad=2)
         )
         
-        # Save frame
+        # Save frame - NO bbox_inches to maintain exact pixel alignment
         frame_path = self.output_dir / f"frame_{frame_num:05d}.png"
-        plt.savefig(frame_path, dpi=100, bbox_inches='tight', pad_inches=0, facecolor='#1a1a2e')
+        plt.savefig(frame_path, dpi=dpi, facecolor='#1a1a2e', 
+                   pad_inches=0, bbox_inches=None)
         plt.close(fig)
         
         return str(frame_path)

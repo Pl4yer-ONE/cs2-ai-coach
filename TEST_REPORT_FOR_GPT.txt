@@ -1,6 +1,6 @@
 ================================================================================
                      FRAGAUDIT TEST REPORT (v3.3.0)
-                     Generated: 2026-01-14 07:43 IST
+                     Generated: 2026-01-14 09:30 IST
 ================================================================================
 
 PROJECT: FragAudit - CS2 Demo Analysis Engine
@@ -8,20 +8,60 @@ REPO: https://github.com/Pl4yer-ONE/FragAudit
 LICENSE: Dual (GPLv3 + Commercial)
 
 ================================================================================
-                              CLEANUP PERFORMED
+                              CHANGES MADE
 ================================================================================
 
-Removed:
-  - reports/ (old outputs)
-  - __pycache__/ (all)
-  - .pytest_cache/
+1. RADAR ALIGNMENT FIX (src/radar/renderer.py)
+   ─────────────────────────────────────────────
+   Problem: Player positions misaligned with map background
+   Root Cause: bbox_inches='tight' in plt.savefig() cropped frames differently
+   
+   Fix Applied:
+   - Removed bbox_inches='tight' from plt.savefig()
+   - Added plt.subplots_adjust(left=0, right=1, top=1, bottom=0) for zero margins
+   - Added aspect='equal' to ax.imshow() for consistent map scaling
+   - Added ax.set_aspect('equal', adjustable='box') for axes consistency
+   - Changed figsize to use resolution/dpi for pixel-perfect output
+
+   Code Changes:
+   ```diff
+   - fig, ax = plt.subplots(figsize=(10.24, 10.24), dpi=100)
+   + dpi = 100
+   + fig_size = self.resolution / dpi
+   + fig, ax = plt.subplots(figsize=(fig_size, fig_size), dpi=dpi)
+   
+   + plt.subplots_adjust(left=0, right=1, top=1, bottom=0)
+   
+   - ax.imshow(self.map_image, extent=[...], zorder=1)
+   + ax.imshow(self.map_image, extent=[...], zorder=1, aspect='equal')
+   
+   + ax.set_aspect('equal', adjustable='box')
+   
+   - plt.savefig(frame_path, dpi=100, bbox_inches='tight', pad_inches=0, ...)
+   + plt.savefig(frame_path, dpi=dpi, facecolor='#1a1a2e', 
+   +            pad_inches=0, bbox_inches=None)
+   ```
+
+2. FFMPEG WIDTH FIX (src/radar/video.py)
+   ─────────────────────────────────────────────
+   Problem: ffmpeg error "width not divisible by 2" on odd-dimension maps
+   Fix: Added -vf scale filter to ensure even dimensions
+   
+   Code Changes:
+   ```diff
+   + "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",  # Ensure even dimensions
+   ```
+
+3. COMMERCIAL EMAIL UPDATE (docs/COMMERCIAL.md)
+   ─────────────────────────────────────────────
+   Changed: licensing@fragaudit.com → FragAudit@proton.me
 
 ================================================================================
                               UNIT TEST RESULTS
 ================================================================================
 
 Test Command: python -m pytest tests/ -v
-Result: 48/48 PASSED (0.76s)
+Result: 48/48 PASSED (0.85s)
 
 Tests by Module:
   - test_calibration.py: 14 passed (scoring calibration)
@@ -29,117 +69,56 @@ Tests by Module:
   - test_synergy.py: 12 passed (duo/team metrics)
   - test_timeline.py: 10 passed (event taxonomy)
 
-Key Test Categories:
-  [x] TimelineEvent creation and metadata
-  [x] Event type taxonomy (18 frozen types)
-  [x] Event sorting by timestamp
-  [x] Monotonic timestamp validation
-  [x] Duo symmetry (A,B == B,A)
-  [x] Trade success rate calculation
-  [x] Zero-division safety
-  [x] Coordinate transforms (world <-> radar)
-
 ================================================================================
                            DEMO ANALYSIS OUTPUT
 ================================================================================
 
-Command: python main.py analyze --demo match/phoenix-vs-rave-m1-nuke.dem --html --timeline --heatmap
+Command: python main.py analyze --demo phantom-vs-hyperspirit-m1-mirage.dem --html --radar
 
-Demo: match/phoenix-vs-rave-m1-nuke.dem
-Map: de_nuke
+Demo: phantom-vs-hyperspirit-m1-mirage.dem
+Map: de_mirage
 Players: 10
-Issues Detected: 6 (dry_peek)
+Issues Detected: 7 (dry_peek)
 
 Generated Files:
-  1. coaching_report_20260114_074356.json (8.9 KB) - Full analysis
-  2. report_20260114_074356.html (155 KB) - Visual report
-  3. timeline_20260114_074356.json (3.4 KB) - Per-round events
-  4. timeline_20260114_074356.csv (498 B) - Flat event export
-  5. heatmaps/20260114_074356/nuke/kills.png - Kill density
-
+  1. coaching_report_*.json (9.3 KB) - Full analysis
+  2. report_*.html (4.8 MB) - Visual report with embedded radar
+  3. radar_*.mp4 (3.5 MB) - Radar replay video ✅ FIXED
+  
 ================================================================================
-                           TIMELINE JSON SCHEMA
+                         RADAR VIDEO VERIFICATION
 ================================================================================
 
-Schema Version: 1.0
+Before Fix:
+  - Video file: 0 bytes (empty)
+  - ffmpeg error: "width not divisible by 2 (793x788)"
+  - Map and player positions misaligned due to cropping
 
-Structure:
-{
-  "match_id": "string",
-  "map": "string",
-  "schema_version": "1.0",
-  "rounds": [
-    {
-      "round": int,
-      "start_tick": int,
-      "end_tick": int,
-      "events": [
-        {
-          "tick": int,
-          "timestamp_ms": int,
-          "event": "EventType",
-          "player": "string",
-          "team": "CT|T",
-          "wpa_delta": float,
-          ...optional fields
-        }
-      ]
-    }
-  ]
-}
-
-Event Types (Frozen Taxonomy):
-  KILL, DEATH, TRADE, ASSIST, DAMAGE
-  FLASH_ASSIST, SMOKE_BLOCK, MOLLY_DAMAGE, UTILITY_THROW
-  ENTRY_KILL, CLUTCH_START, CLUTCH_WIN
-  PLANT, DEFUSE, BOMB_DROPPED
-  ROUND_START, ROUND_END
-
-================================================================================
-                           NEW MODULES (v3.3)
-================================================================================
-
-1. src/timeline/
-   - events.py: TimelineEvent dataclass, EventType enum
-   - builder.py: TimelineBuilder, RoundTimeline
-   - exporter.py: JSON/CSV export functions
-
-2. src/synergy/
-   - duo.py: DuoStats, compute_duo_metrics
-   - team.py: TeamStats, compute_team_metrics
-
-3. CLI Integration:
-   - --timeline flag added to main.py analyze command
-
-================================================================================
-                           LICENSE STATUS
-================================================================================
-
-LICENSE file: GNU General Public License v3.0 (GPLv3)
-COMMERCIAL.md: Present (for proprietary licensing)
-CONTRIBUTING.md: CLA clause included
-Source Headers: 51 files updated with copyright notice
-
-Header Format:
-  # Copyright (c) 2026 Pl4yer-ONE
-  # This file is part of FragAudit.
-  # Licensed under GPLv3 or commercial license.
+After Fix:
+  - Video file: 3.5 MB ✅
+  - No ffmpeg errors
+  - Player positions correctly aligned with map background
+  - Consistent frame sizing across all rendered frames
 
 ================================================================================
                            SAMPLE PLAYER OUTPUT
 ================================================================================
 
-  MarKE
-    K/D: 2.71  HS: 57.9%  Trade: 28%  Role: Entry
+  Ciocardau
+    K/D: 2.22  HS: 60.0%  Trade: 33%  Role: Entry
     ✓ No issues detected
 
-  mds
-    K/D: 0.36  HS: 20.0%  Trade: 14%  Role: Trader
+  d1maje
+    K/D: 3.0  HS: 61.1%  Trade: 50%  Role: Trader
+    ✓ No issues detected
+
+  ADRON
+    K/D: 2.12  HS: 58.8%  Trade: 12%  Role: SiteAnchor
+    ✓ No issues detected
+
+  mynio
+    K/D: 0.27  HS: 25.0%  Trade: 20%  Role: Trader
     🟡 [MED] R0 0:30 — dry peek
-
-  junior
-    K/D: 4.0  HS: 62.5%  Trade: 0%  Role: SiteAnchor
-    ✓ No issues detected
 
 ================================================================================
                               VERIFICATION
@@ -148,14 +127,23 @@ Header Format:
 [x] All 48 unit tests pass
 [x] Demo parsing succeeds
 [x] JSON report generated
-[x] HTML report generated
-[x] Heatmap generated and embedded
-[x] Timeline JSON/CSV generated
-[x] Schema version 1.0 frozen
-[x] Dual license correctly applied
-[x] Source headers present
+[x] HTML report generated (4.8 MB)
+[x] Radar video generated (3.5 MB) ✅ FIXED
+[x] Player alignment on radar correct ✅ FIXED
+[x] ffmpeg odd-dimension error resolved ✅ FIXED
+[x] Email updated to FragAudit@proton.me
 
 STATUS: ALL CHECKS PASSED ✓
+
+================================================================================
+                         GIT COMMITS
+================================================================================
+
+1. e90b954: fix: Radar video ffmpeg width error
+   - Added -vf scale filter for even dimensions
+
+2. (pending): fix: Radar map alignment
+   - Fixed subplots_adjust, aspect ratio, removed bbox_inches
 
 ================================================================================
                          END OF TEST REPORT
