@@ -5,6 +5,31 @@ All notable changes to the CS2 AI Coach project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.8.0] - 2026-01-14
+
+### 🔮 PREDICTION MODEL ENGINE
+
+Hand-written logistic regression for win probability and player impact.
+
+### Added
+- **Win Predictor** (`src/predict/win_model.py`):
+  - P(round_win) from economy, man advantage, roles, mistakes, strategy
+  - Bounded output [0.05, 0.95]
+  - Explicit explainable coefficients
+  - Factor breakdown in every prediction
+- **Player Predictor** (`src/predict/player_model.py`):
+  - P(positive_impact) from historical rating, role fit, mistakes
+  - Expected rating projection
+  - Key factors exposed
+- **Tests**: 23 unit tests for prediction models
+
+### Philosophy
+- NO sklearn, NO neural nets
+- Every coefficient is explicit and tunable
+- Every prediction is explainable
+
+---
+
 ## [3.7.0] - 2026-01-14
 
 ### 🎯 STRATEGY CLUSTERING ENGINE
