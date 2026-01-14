@@ -215,9 +215,14 @@ class RadarRenderer:
             if player.steam_id in frame.trail_positions:
                 self._draw_trail(ax, player, frame.trail_positions[player.steam_id])
         
-        # Draw players
-        for player in frame.players:
-            self._draw_player(ax, player)
+        # Draw players with numbers (CT: 1-5, T: 6-10)
+        ct_players = [p for p in frame.players if p.team == 'CT']
+        t_players = [p for p in frame.players if p.team == 'T']
+        
+        for i, player in enumerate(ct_players):
+            self._draw_player(ax, player, player_num=i + 1)
+        for i, player in enumerate(t_players):
+            self._draw_player(ax, player, player_num=i + 6)
         
         # Draw bomb
         if frame.bomb_x is not None and frame.bomb_y is not None:
@@ -260,8 +265,8 @@ class RadarRenderer:
         
         return str(frame_path)
     
-    def _draw_player(self, ax, player: PlayerFrame):
-        """Draw a single player on the map."""
+    def _draw_player(self, ax, player: PlayerFrame, player_num: int = 0):
+        """Draw a single player with boltobserv-style numbered circle."""
         # Convert world coords to radar coords
         px, py = self._convert_coords(
             np.array([player.x]),
@@ -277,37 +282,81 @@ class RadarRenderer:
         if px < 0 or px > self.resolution or py < 0 or py > self.resolution:
             return
         
-        # Color and alpha
-        color = CT_COLOR if player.team == 'CT' else T_COLOR
-        alpha = ALIVE_ALPHA if player.alive else DEAD_ALPHA
+        # Boltobserv-style colors
+        if player.team == 'CT':
+            fill_color = '#4A90D9' if player.alive else '#2B5278'
+            edge_color = '#6CB4EE' if player.alive else '#3D6B8F'
+        else:
+            fill_color = '#D9A441' if player.alive else '#785D2B'
+            edge_color = '#EEC86C' if player.alive else '#8F793D'
         
-        # Draw player dot
+        alpha = 0.95 if player.alive else 0.4
+        
+        # Draw player circle (boltobserv style - larger, filled)
+        circle_size = 18 if player.alive else 12
         ax.scatter(
             px, py,
-            c=color,
-            s=self.player_size ** 2,
+            c=fill_color,
+            s=circle_size ** 2,
             alpha=alpha,
             zorder=5,
-            edgecolors='white' if player.alive else 'gray',
-            linewidth=1
+            edgecolors=edge_color,
+            linewidth=2
         )
+        
+        # Draw player number inside circle (boltobserv style)
+        if player.alive and player_num > 0:
+            ax.text(
+                px, py,
+                str(player_num),
+                color='white',
+                fontsize=9,
+                fontweight='bold',
+                ha='center', va='center',
+                zorder=6
+            )
         
         # Draw X for dead players
         if not player.alive:
-            ax.scatter(px, py, marker='x', c='white', s=self.player_size, alpha=0.5, zorder=6)
+            ax.scatter(px, py, marker='x', c='white', s=60, alpha=0.6, zorder=6, linewidths=2)
         
-        # Draw name
-        if self.show_names and player.alive:
-            ax.text(
-                px, py - 15,
-                player.name[:10],
-                color='white', fontsize=6,
-                ha='center', va='bottom',
-                alpha=0.8
-            )
+        # Draw viewing direction (cone) for alive players
+        if player.alive and hasattr(player, 'yaw'):
+            self._draw_view_cone(ax, px, py, getattr(player, 'yaw', 0), fill_color)
+    
+    def _draw_view_cone(self, ax, px, py, yaw, color):
+        """Draw player viewing direction cone (boltobserv style)."""
+        import math
+        # Convert yaw to radians (-yaw because radar Y is flipped)
+        angle = math.radians(-yaw + 90)
+        
+        # Cone parameters
+        length = 25  # Length of view cone
+        spread = 30  # Degrees of spread
+        
+        # Calculate cone points
+        left_angle = angle - math.radians(spread / 2)
+        right_angle = angle + math.radians(spread / 2)
+        
+        x1 = px + length * math.cos(left_angle)
+        y1 = py - length * math.sin(left_angle)
+        x2 = px + length * math.cos(right_angle)
+        y2 = py - length * math.sin(right_angle)
+        
+        # Draw cone as filled triangle
+        from matplotlib.patches import Polygon
+        cone = Polygon(
+            [(px, py), (x1, y1), (x2, y2)],
+            closed=True,
+            facecolor=color,
+            edgecolor='none',
+            alpha=0.3,
+            zorder=4
+        )
+        ax.add_patch(cone)
     
     def _draw_smoke(self, ax, smoke: SmokeFrame, current_tick: int):
-        """Draw a smoke grenade circle on the map."""
+        """Draw a smoke grenade (boltobserv-style gray cloud)."""
         # Convert world coords to radar coords
         sx, sy = self._convert_coords(
             np.array([smoke.x]),
