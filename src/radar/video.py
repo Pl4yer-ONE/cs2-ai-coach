@@ -62,6 +62,7 @@ def encode_video(
         "-y",                           # Overwrite output
         "-r", str(fps),                 # Input frame rate
         "-i", input_pattern,            # Input pattern
+        "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",  # Ensure even dimensions
         "-c:v", "libx264",              # H.264 codec
         "-pix_fmt", "yuv420p",          # Pixel format for compatibility
         "-crf", str(quality),           # Quality
