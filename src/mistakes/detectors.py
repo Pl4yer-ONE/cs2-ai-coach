@@ -20,6 +20,13 @@ from typing import List, Dict, Any, Optional
 from enum import Enum
 import math
 
+# Import contextual WPA for weighted calculations
+try:
+    from src.wpa.contextual_wpa import calculate_contextual_wpa
+    HAS_WPA = True
+except ImportError:
+    HAS_WPA = False
+
 
 class ErrorType(Enum):
     """Mistake type taxonomy."""
@@ -50,7 +57,9 @@ class DetectedMistake:
         map_pos: Position dict with x, y, area
         error_type: ErrorType enum value
         severity: Severity level
-        wpa_loss: Win Probability loss caused by error
+        wpa_loss: Base Win Probability loss
+        weighted_wpa: Context-adjusted WPA loss
+        wpa_context: Economy/time context info
         details: Human-readable explanation
     """
     round: int
@@ -59,6 +68,8 @@ class DetectedMistake:
     error_type: str
     severity: str
     wpa_loss: float = 0.0
+    weighted_wpa: float = 0.0
+    wpa_context: Optional[Dict[str, Any]] = None
     steam_id: str = ""
     map_pos: Optional[Dict[str, Any]] = None
     details: str = ""
@@ -68,6 +79,8 @@ class DetectedMistake:
         d = asdict(self)
         if d['map_pos'] is None:
             d['map_pos'] = {}
+        if d['wpa_context'] is None:
+            d['wpa_context'] = {}
         return d
 
 
