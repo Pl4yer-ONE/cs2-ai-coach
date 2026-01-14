@@ -241,7 +241,7 @@ Sample calibration results from professional match analysis:
 
 ## VII. Conclusion
 
-FragAudit provides a deterministic, transparent approach to CS2 performance auditing. By implementing exploit-resistant calibration and behavior-based role detection, the system addresses fundamental limitations of existing esports analytics tools. The open-source implementation enables reproducibility and community contribution under the MIT License.
+FragAudit provides a deterministic, transparent approach to CS2 performance auditing. By implementing exploit-resistant calibration and behavior-based role detection, the system addresses fundamental limitations of existing esports analytics tools. The open-source implementation enables reproducibility and community contribution under the PolyForm Noncommercial License.
 
 ---
 
@@ -253,7 +253,7 @@ FragAudit provides a deterministic, transparent approach to CS2 performance audi
 
 [3] T. Tango, M. Lichtman, and A. Dolphin, "The Book: Playing the Percentages in Baseball," Potomac Books, 2007.
 
-
+[4] PolyForm Project, "PolyForm Noncommercial License 1.0.0," 2019. [Online]. Available: https://polyformproject.org/licenses/noncommercial/1.0.0/
 
 ---
 
@@ -300,4 +300,4 @@ rating = ScoreEngine.compute_final_rating(
 
 *Repository: https://github.com/Pl4yer-ONE/FragAudit*
 
-*License: MIT*
+*License: PolyForm Noncommercial 1.0.0*

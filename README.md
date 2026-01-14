@@ -6,7 +6,8 @@
 
 **Parses CS2 demos and flags positional mistakes using rule-based analysis.**
 
-[![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![GPLv3 License](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+[![Commercial License](https://img.shields.io/badge/License-Commercial-purple.svg)](docs/COMMERCIAL.md)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![CI](https://github.com/Pl4yer-ONE/FragAudit/actions/workflows/ci.yml/badge.svg)](https://github.com/Pl4yer-ONE/FragAudit/actions)
 
@@ -239,7 +240,7 @@ See [TECHNICAL.md](docs/TECHNICAL.md) for details.
 
 ## Contributing
 
-MIT licensed — contributions welcome.
+GPLv3 licensed — contributions welcome.
 
 ```bash
 python -m pytest tests/ -v
@@ -251,7 +252,17 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
-[MIT](LICENSE) — Use it, fork it, sell it, whatever.
+**FragAudit is Dual-Licensed:**
+
+1.  **Community Use**: [GNU GPLv3](LICENSE)
+    - Free for open source and personal use.
+    - Modifications must be open-sourced.
+
+2.  **Commercial Use**: [Commercial License](docs/COMMERCIAL.md)
+    - For proprietary applications, closed-source distribution, and enterprise use.
+    - [Contact us](docs/COMMERCIAL.md) for pricing.
+
+*By using this software, you agree to the terms of one of these licenses.*
 
 ---
 
