@@ -121,6 +121,11 @@ For more information, see README.md
         help="Generate GIF preview of radar"
     )
     analyze_parser.add_argument(
+        "--fast-radar",
+        action="store_true",
+        help="Use fast PIL renderer (10x faster, simpler visuals)"
+    )
+    analyze_parser.add_argument(
         "--timeline",
         action="store_true",
         help="Generate per-round event timeline (JSON)"
@@ -422,6 +427,7 @@ def run_analyze(args) -> int:
         # Radar video generation
         if getattr(args, 'radar', False) or getattr(args, 'gif', False):
             from src.radar import extract_ticks, RadarRenderer, encode_video, encode_gif, check_ffmpeg
+            from src.radar.fast_renderer import FastRadarRenderer
             from datetime import datetime
             import tempfile
             import base64
@@ -430,7 +436,8 @@ def run_analyze(args) -> int:
                 print("⚠️ ffmpeg not installed. Skipping radar video.")
                 print("  Install with: brew install ffmpeg")
             else:
-                print("Generating radar replay...")
+                use_fast = getattr(args, 'fast_radar', False)
+                print(f"Generating radar replay {'(FAST mode)' if use_fast else ''}...")
                 
                 # Extract ticks: 64 tick demo / 16 interval = 4 frames per second of game
                 # For 20 FPS output, 5 seconds of game = 1 second of video (5x speed)
@@ -451,12 +458,18 @@ def run_analyze(args) -> int:
                     # Create temp frames directory
                     frames_dir = f"reports/radar_frames_{timestamp}"
                     
-                    # Render frames
-                    renderer = RadarRenderer(
-                        map_name=parsed_demo.map_name,
-                        output_dir=frames_dir,
-                        show_names=False
-                    )
+                    # Choose renderer: Fast (PIL) or Standard (matplotlib)
+                    if use_fast:
+                        renderer = FastRadarRenderer(
+                            map_name=parsed_demo.map_name,
+                            output_dir=frames_dir
+                        )
+                    else:
+                        renderer = RadarRenderer(
+                            map_name=parsed_demo.map_name,
+                            output_dir=frames_dir,
+                            show_names=False
+                        )
                     renderer.render_all(frames)
                     
                     # Encode to MP4
