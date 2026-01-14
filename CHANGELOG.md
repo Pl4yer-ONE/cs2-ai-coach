@@ -5,6 +5,62 @@ All notable changes to the CS2 AI Coach project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.0] - 2026-01-14
+
+### ⚡ CONTEXTUAL WPA ENGINE
+
+Smarter win probability with situational awareness.
+
+### Added
+- **Contextual WPA** (`src/wpa/contextual_wpa.py`):
+  - Economy multipliers: eco 1.6x, half_buy 1.2x, anti-eco 0.6x
+  - Man-advantage: 5v4 +15%, 5v3 +25%
+  - Clutch pressure: 1v1 1.5x, 1v2 2.0x, 1v5 4.0x
+  - Time decay: early 0.8x, late 1.3x, bomb_planted 1.5x
+  - Configurable via `DEFAULT_CONFIG` dict
+- **Tests**: 29 unit tests for WPA calculations
+
+---
+
+## [3.5.0] - 2026-01-14
+
+### 🎭 ROLE INTELLIGENCE ENGINE v2
+
+Per-round role detection with spatial metrics.
+
+### Added
+- **Role Classifier** (`src/roles/classifier.py`):
+  - 5 roles: ENTRY, LURK, ANCHOR, ROTATOR, SUPPORT
+  - Per-round detection (not per-match)
+  - Confidence scores with evidence thresholds
+  - `avg_teammate_dist` spatial metric for LURK detection
+- **Tests**: 19 unit tests for role classification
+
+### Fixed
+- **Dual Classification Bug**: No longer classifies player as CT+T in same round
+- **Fake Confidence**: Now evidence-based with margin calculation
+- **LURK Detection**: Requires distance >1800 AND late timing >8s
+
+---
+
+## [3.4.0] - 2026-01-14
+
+### 🔍 MISTAKE DETECTION ENGINE
+
+Deterministic error detection for tactical coaching.
+
+### Added
+- **Mistake Detectors** (`src/mistakes/detectors.py`):
+  - OVERPEEK: No trade support within 3s window
+  - NO_TRADE_SPACING: Entry dies without backup in range
+  - ROTATION_DELAY: Slow rotation after plant (>10s)
+  - UTILITY_WASTE: Flash without followup (2s)
+  - POSTPLANT_MISPLAY: T dies postplant without crossfire
+- **JSON Export**: Schema with round, timestamp, player, severity, wpa_loss
+- **Tests**: 31 unit tests for mistake detection
+
+---
+
 ## [3.3.1] - 2026-01-14
 
 ### 🔧 RADAR FIX PATCH

@@ -200,10 +200,16 @@ FragAudit/
 │   ├── parser/          # Demo parsing (demoparser2)
 │   ├── features/        # Feature extraction
 │   ├── classifier/      # Mistake detection rules
+│   ├── mistakes/        # Tactical error detectors (v3.4)
+│   ├── roles/           # Role intelligence engine (v3.5)
+│   ├── wpa/             # Contextual WPA calculator (v3.6)
+│   ├── timeline/        # Round event streams
+│   ├── synergy/         # Team chemistry analysis
 │   ├── report/          # JSON/Markdown/HTML output
+│   ├── radar/           # Replay video generation
 │   ├── nlp/             # Ollama integration
 │   └── maps/            # Coordinate → callout mapping
-├── tests/               # 26 unit tests
+├── tests/               # 135 unit tests
 ├── match/               # Demo files
 └── docs/                # Technical documentation
 ```
@@ -218,10 +224,14 @@ FragAudit/
 - [x] v3.1.1 — Trade Potential Score, CSV export
 - [x] v3.2 — Kill heatmaps, radar replay video (boltobserv-style)
 - [x] v3.2.1 — Smoke circles, flash radius, kill markers in radar
+- [x] v3.3 — Round timeline, team synergy, dual licensing
+- [x] v3.4 — **Mistake Detection Engine** (OVERPEEK, NO_TRADE_SPACING)
+- [x] v3.5 — **Role Intelligence Engine** (ENTRY, LURK, ANCHOR, SUPPORT)
+- [x] v3.6 — **Contextual WPA** (economy, clutch, time multipliers)
 
 ### Planned
-- [ ] v3.3 — Round timeline visualization
-- [ ] v3.4 — Team synergy report, multi-demo analysis
+- [ ] v3.7 — Strategy Clustering
+- [ ] v3.8 — Prediction Model
 
 ---
 
