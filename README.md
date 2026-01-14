@@ -89,6 +89,15 @@ FragAudit reads CS2 demo files and identifies common positioning mistakes:
 
 </div>
 
+### Kill Heatmap
+<div align="center">
+
+![Kill Heatmap](docs/heatmap_example.png)
+
+*Kill density visualization showing engagement hotspots on de_mirage*
+
+</div>
+
 ---
 
 ## Who It's For
