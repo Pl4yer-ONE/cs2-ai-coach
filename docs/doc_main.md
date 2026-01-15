@@ -300,4 +300,4 @@ rating = ScoreEngine.compute_final_rating(
 
 *Repository: https://github.com/Pl4yer-ONE/FragAudit*
 
-*License: PolyForm Noncommercial 1.0.0*
+
