@@ -26,6 +26,7 @@ reports/
 !assets/maps/*.png
 *.json
 !package.json
+!examples/**/*.json
 
 # Demo files (large)
 match/*.dem

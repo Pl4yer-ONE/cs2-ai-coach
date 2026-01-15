@@ -1,0 +1,65 @@
+{
+    "match": "acend-vs-washington-m1-dust2",
+    "map": "de_dust2",
+    "rounds_played": 24,
+    "players": [
+        {
+            "name": "MarKE",
+            "steam_id": "76561198xxxxx",
+            "team": "CT",
+            "rating": 1.42,
+            "role": {
+                "primary": "Entry",
+                "confidence": 0.78,
+                "signals": {
+                    "first_contact_rate": 0.80,
+                    "avg_teammate_distance": 320,
+                    "bomb_proximity": 0.45
+                }
+            },
+            "stats": {
+                "kills": 24,
+                "deaths": 16,
+                "assists": 5,
+                "adr": 98.3,
+                "hs_percentage": 52.1,
+                "kast": 78.4,
+                "first_kills": 8,
+                "first_deaths": 3
+            },
+            "mistakes": [],
+            "highlights": [
+                "3k on eco round 7",
+                "Opening kill 6 rounds in a row (R8-R13)"
+            ]
+        },
+        {
+            "name": "Gabe",
+            "steam_id": "76561198xxxxx",
+            "team": "T",
+            "rating": 0.78,
+            "role": {
+                "primary": "Lurker",
+                "confidence": 0.68
+            },
+            "stats": {
+                "kills": 12,
+                "deaths": 19,
+                "assists": 4,
+                "adr": 61.2
+            },
+            "mistakes": [
+                {
+                    "round": 4,
+                    "type": "multi_angle_exposure",
+                    "details": "Exposed to 2 angles at Long Doors"
+                },
+                {
+                    "round": 15,
+                    "type": "late_rotate",
+                    "details": "Rotated 8.2s late on CT push"
+                }
+            ]
+        }
+    ]
+}
