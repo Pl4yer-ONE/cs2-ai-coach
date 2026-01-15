@@ -1,0 +1,23 @@
+# Discussion categories for FragAudit
+# Enable in GitHub Settings > General > Features > Discussions
+
+# Categories to create manually in GitHub:
+# 1. Feature Ideas - 💡 Suggest new features or improvements
+# 2. Help & Support - ❓ Get help with installation or usage
+# 3. Tactics & Theory - 🎯 Discuss CS2 tactics and analysis methodology
+# 4. Show Your Analysis - 📊 Share interesting findings from your demos
+
+# This file documents the structure.
+# Actual creation requires GitHub web interface.
+
+blank_issues_enabled: false
+contact_links:
+  - name: 💡 Feature Ideas
+    url: https://github.com/Pl4yer-ONE/FragAudit/discussions/categories/feature-ideas
+    about: Suggest new features or improvements
+  - name: ❓ Help & Support
+    url: https://github.com/Pl4yer-ONE/FragAudit/discussions/categories/help-support
+    about: Get help with installation or usage
+  - name: 🎯 Tactics & Theory
+    url: https://github.com/Pl4yer-ONE/FragAudit/discussions/categories/tactics-theory
+    about: Discuss CS2 tactics and analysis methodology

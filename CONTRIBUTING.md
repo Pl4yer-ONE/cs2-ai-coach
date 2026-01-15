@@ -1,70 +1,155 @@
 # Contributing to FragAudit
 
-Thank you for your interest in contributing to FragAudit! We welcome contributions from the community to make this the best CS2 coaching tool available.
-
-## ⚖️ Legal & Licensing (Read Carefully)
-
-**FragAudit is a Dual-Licensed project.**
-
-By submitting a Pull Request (PR) to this repository, you agree to the following **Contributor License Agreement (CLA)** terms:
-
-1.  **Grant of License**: You grant the project maintainers a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable license to reproduce, prepare derivative works of, publicly display, publicly perform, sublicense, and distribute your contribution (in whole or in part) as part of:
-    -   The **Community Edition** (licensed under GNU GPLv3).
-    -   The **Commercial Edition** (licensed under proprietary terms).
-
-2.  **Copyright Retention**: You retain ownership of the copyright to your contribution. You are simply giving us permission to use it in both versions of the software.
-
-3.  **Originality**: You certify that the code you are submitting is your original work or that you have the right to license it to us under these terms.
-
-*If you do not agree to these terms, please do not submit a PR.*
+Thank you for your interest in contributing! This guide will help you get started.
 
 ---
 
-## 🛠️ How to Contribute
+## Ways to Contribute
 
-1.  **Fork the Repository**: Click the "Fork" button on GitHub.
-2.  **Create a Branch**: `git checkout -b feature/amazing-feature`
-3.  **Make Changes**: Write clean, documented code.
-4.  **Test**: Ensure all unit tests pass.
-    ```bash
-    python -m pytest tests/ -v
-    ```
-5.  **Commit**: Use [Conventional Commits](https://www.conventionalcommits.org/).
-    ```bash
-    git commit -m "feat: add new round timeline visualization"
-    ```
-6.  **Push & PR**: Push to your fork and open a Pull Request against `main`.
+### 🐛 Report Bugs
+Found an issue? [Open a bug report](https://github.com/Pl4yer-ONE/FragAudit/issues/new?template=bug_report.md)
 
----
+### 💡 Suggest Features
+Have an idea? [Open a feature request](https://github.com/Pl4yer-ONE/FragAudit/issues/new?template=feature_request.md)
 
-## ✅ What We Accept
+### 📊 Share Analysis
+Found interesting patterns? Share in [Discussions](https://github.com/Pl4yer-ONE/FragAudit/discussions)
 
--   **Bug Fixes**: Fixes for demonstrable issues (please include a test case).
--   **New Features**: Improvements that align with the roadmap (e.g., new detection rules).
--   **Documentation**: Clarity updates, typo fixes, or new examples.
--   **Performance**: Optimizations for demo parsing or rendering.
-
-## ❌ What We Don't Accept
-
--   **Breaking Changes**: Unless previously discussed in an Issue.
--   **No Tests**: Features submitted without accompanying unit tests.
--   **Spaghetti Code**: Unstructured or undocumented code.
--   **Dependencies**: Adding heavy libraries without justification.
+### 🛠️ Submit Code
+Fix bugs or add features. See below for setup.
 
 ---
 
-## 💻 Code Style
+## Good First Issues
 
--   **Python**: Follow PEP 8.
--   **Type Hints**: Strongly encouraged for all public functions.
--   **Docstrings**: Required for modules, classes, and complex functions.
--   **Imports**: Sorted and unused imports removed.
+Looking for your first contribution? Try these:
+
+| Label | Description |
+|-------|-------------|
+| `good first issue` | Simple, self-contained tasks |
+| `documentation` | Improve docs or examples |
+| `tests` | Add test coverage |
 
 ---
 
-## 🐞 Found a Bug?
+## Development Setup
 
-Please open an issue on GitHub with:
-1.  The `.dem` file (if public) or a description of the scenario.
-2.  The command you ran.
-3.  The expected vs. actual output.
+```bash
+# 1. Fork and clone
+git clone https://github.com/YOUR_USERNAME/FragAudit.git
+cd FragAudit
+
+# 2. Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+pip install -r requirements-dev.txt  # If available
+
+# 4. Run tests
+python -m pytest tests/ -v
+```
+
+---
+
+## Code Standards
+
+### Python Style
+- Follow PEP 8
+- Use type hints where possible
+- Keep functions under 50 lines
+
+### Commit Messages
+```
+type: short description
+
+- feat: New feature
+- fix: Bug fix
+- docs: Documentation
+- test: Tests
+- perf: Performance
+- refactor: Code refactor
+```
+
+Example:
+```
+feat: Add flash assist tracking to role classifier
+
+- Track flash_assists per player
+- Add to Support role detection criteria
+- Update tests
+```
+
+### Testing
+- All new features need tests
+- Run full suite before PR: `pytest tests/`
+- Maintain 100% pass rate
+
+---
+
+## Pull Request Process
+
+1. **Fork** the repository
+2. **Create a branch**: `git checkout -b feature/your-feature`
+3. **Make changes** and commit
+4. **Run tests**: `pytest tests/`
+5. **Push**: `git push origin feature/your-feature`
+6. **Open PR** with clear description
+
+### PR Checklist
+- [ ] Tests pass (`pytest tests/`)
+- [ ] Code follows style guide
+- [ ] Commit messages are clear
+- [ ] Documentation updated (if needed)
+
+---
+
+## Example Contributions
+
+### Adding a New Mistake Type
+
+1. Edit `src/mistakes/detectors.py`
+2. Add detection logic
+3. Add tests in `tests/test_mistakes.py`
+4. Update `docs/` if needed
+
+```python
+# Example: Adding "FLASH_PEEK" mistake type
+class MistakeDetector:
+    def detect_flash_peek(self, kill_event):
+        """Detect when player peeks while flashed."""
+        if kill_event.victim_was_flashed:
+            return Mistake(
+                type=MistakeType.FLASH_PEEK,
+                severity=Severity.MEDIUM,
+                description="Peeked while flashed"
+            )
+```
+
+### Adding a New Role
+
+1. Edit `src/roles/classifier.py`
+2. Define detection criteria
+3. Add tests in `tests/test_roles.py`
+
+```python
+# Example: Adding "AGGRO_CT" role
+def classify_aggro_ct(features):
+    """Detect aggressive CT play."""
+    if features.t_side_kills >= 3 and features.avg_distance > 500:
+        return Role.AGGRO_CT, 0.7
+```
+
+---
+
+## Questions?
+
+- [GitHub Discussions](https://github.com/Pl4yer-ONE/FragAudit/discussions) for questions
+- [Issues](https://github.com/Pl4yer-ONE/FragAudit/issues) for bugs/features
+
+---
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the **GNU General Public License v3.0**.
