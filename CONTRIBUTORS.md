@@ -1,37 +1,52 @@
 # Contributors
 
-Thank you to everyone who has contributed to FragAudit!
+Thank you to everyone who has contributed to FragAudit! 🎯
 
-## Core Team
+## Project Lead
 
-- **Pl4yer-ONE** - Creator & maintainer
-
-## Contributors
-
-<!-- Contributors will be listed here as they contribute -->
-
-*Be the first contributor! See [CONTRIBUTING.md](CONTRIBUTING.md) for how to get started.*
-
----
+- **[@Pl4yer-ONE](https://github.com/Pl4yer-ONE)** - Creator & Lead Developer
 
 ## How to Get Listed
 
-1. Submit a PR that gets merged
-2. Report a bug that gets fixed
-3. Contribute to documentation
-4. Share valuable analysis in Discussions
+When you contribute to FragAudit, you'll be added here! Contributions include:
 
-All contributors will be recognized here.
+- 🐛 **Bug Reports** - Finding and reporting issues
+- 💡 **Feature Ideas** - Suggesting improvements
+- 🔧 **Code** - Pull requests that get merged
+- 📖 **Documentation** - Improving docs, examples, or tutorials
+- 📊 **Analysis** - Sharing interesting demo analysis findings
+- 🧪 **Testing** - Helping test new releases
+
+## All Contributors
+
+<!-- ALL-CONTRIBUTORS-LIST:START -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+*Be the first contributor! Check out our [good first issues](https://github.com/Pl4yer-ONE/FragAudit/labels/good%20first%20issue)*
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+<!-- ALL-CONTRIBUTORS-LIST:END -->
 
 ---
 
 ## Contribution Stats
 
-| Type | Count |
-|------|-------|
-| Code contributors | 1 |
-| Documentation | 0 |
-| Bug reports | 0 |
-| Feature ideas | 0 |
+| Metric | Count |
+|--------|-------|
+| Total Contributors | 1 |
+| Pull Requests Merged | - |
+| Issues Resolved | - |
 
-*Stats updated manually*
+---
+
+## Special Thanks
+
+- **[boltobserv](https://github.com/boltgolt/boltobserv)** - Radar map assets and coordinate transformation logic
+- **[demoparser2](https://github.com/LaihoE/demoparser)** - CS2 demo parsing library
+- The CS2 community for feedback and testing
+
+---
+
+*Want to contribute? Read our [Contributing Guide](CONTRIBUTING.md)!*

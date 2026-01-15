@@ -1,0 +1,181 @@
+{
+    "meta": {
+        "fragaudit_version": "3.9.0",
+        "map": "de_dust2",
+        "match_date": "2026-01-10",
+        "total_rounds": 24,
+        "score": {
+            "ct": 13,
+            "t": 11
+        }
+    },
+    "players": [
+        {
+            "name": "MarKE",
+            "steam_id": "76561198012345678",
+            "team": "CT",
+            "role": {
+                "detected": "Entry Fragger",
+                "confidence": 0.87,
+                "reasoning": "First contact in 65% of rounds, low bomb proximity"
+            },
+            "stats": {
+                "kills": 28,
+                "deaths": 16,
+                "assists": 4,
+                "adr": 92.3,
+                "kast": 78.5,
+                "rating": 1.31
+            },
+            "aim_metrics": {
+                "headshot_percentage": 52.1,
+                "time_to_kill_avg_ms": 340,
+                "spray_control_score": 0.78
+            },
+            "mistakes": [
+                {
+                    "type": "wide_peek_no_utility",
+                    "count": 2,
+                    "rounds": [
+                        8,
+                        15
+                    ],
+                    "location": "Long A",
+                    "severity": "medium"
+                }
+            ],
+            "recommendations": [
+                "Pre-flash before peeking Long A doors",
+                "Consider playing more off-angles in late rounds"
+            ]
+        },
+        {
+            "name": "Gabe",
+            "steam_id": "76561198023456789",
+            "team": "CT",
+            "role": {
+                "detected": "Support",
+                "confidence": 0.82,
+                "reasoning": "High utility usage, trades teammates frequently"
+            },
+            "stats": {
+                "kills": 15,
+                "deaths": 19,
+                "assists": 8,
+                "adr": 68.4,
+                "kast": 65.2,
+                "rating": 0.89
+            },
+            "aim_metrics": {
+                "headshot_percentage": 35.2,
+                "time_to_kill_avg_ms": 520,
+                "spray_control_score": 0.62
+            },
+            "mistakes": [
+                {
+                    "type": "isolated_death",
+                    "count": 5,
+                    "rounds": [
+                        3,
+                        7,
+                        12,
+                        18,
+                        22
+                    ],
+                    "location": "B Site",
+                    "severity": "high"
+                },
+                {
+                    "type": "utility_wasted",
+                    "count": 3,
+                    "rounds": [
+                        5,
+                        11,
+                        20
+                    ],
+                    "location": "Mid",
+                    "severity": "low"
+                }
+            ],
+            "recommendations": [
+                "Stay closer to teammates when rotating",
+                "Save smokes for retake situations"
+            ]
+        },
+        {
+            "name": "H0NeST",
+            "steam_id": "76561198034567890",
+            "team": "T",
+            "role": {
+                "detected": "Lurker",
+                "confidence": 0.91,
+                "reasoning": "Avg teammate distance 1200+ units, late round kills"
+            },
+            "stats": {
+                "kills": 18,
+                "deaths": 17,
+                "assists": 3,
+                "adr": 74.1,
+                "kast": 70.8,
+                "rating": 1.02
+            },
+            "aim_metrics": {
+                "headshot_percentage": 44.4,
+                "time_to_kill_avg_ms": 410,
+                "spray_control_score": 0.71
+            },
+            "mistakes": [
+                {
+                    "type": "timing_error",
+                    "count": 4,
+                    "rounds": [
+                        6,
+                        9,
+                        14,
+                        21
+                    ],
+                    "location": "Lower Tunnels",
+                    "severity": "medium"
+                }
+            ],
+            "recommendations": [
+                "Sync lurk timing with team execute",
+                "Consider comms for info before flanking"
+            ]
+        }
+    ],
+    "round_predictions": [
+        {
+            "round": 1,
+            "phase": "buy_round",
+            "ct_win_probability": 0.52,
+            "key_factors": [
+                "equal_economy",
+                "ct_side_advantage"
+            ]
+        },
+        {
+            "round": 15,
+            "phase": "gun_round",
+            "ct_win_probability": 0.68,
+            "key_factors": [
+                "man_advantage_5v3",
+                "bomb_not_planted"
+            ]
+        }
+    ],
+    "team_analysis": {
+        "ct": {
+            "avg_rating": 1.05,
+            "coordination_score": 0.72,
+            "utility_efficiency": 0.65,
+            "trade_rate": 0.58
+        },
+        "t": {
+            "avg_rating": 0.98,
+            "coordination_score": 0.68,
+            "utility_efficiency": 0.71,
+            "trade_rate": 0.52
+        }
+    }
+}
