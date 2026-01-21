@@ -113,29 +113,61 @@ class ReportGenerator:
         mistakes: List[ClassifiedMistake],
         feedback: List[Dict]
     ) -> Dict[str, Any]:
-        """Generate per-player report."""
+        """Generate per-player report with full competitive stats."""
+        
+        # Calculate rating if not already set
+        adr = getattr(features, 'damage_per_round', 0)
+        kast = getattr(features, 'kast_percentage', 0)
+        kpr = features.kills / max(getattr(features, 'rounds_played', 1), 1)
+        dpr = features.deaths / max(getattr(features, 'rounds_played', 1), 1)
+        
+        # Simple HLTV 2.0 inspired rating
+        rating = (0.0073 * kast * 100) + (0.3591 * kpr) - (0.5329 * dpr) + (0.2372 * adr / 100) + 0.0032
+        rating = max(0.0, min(3.0, rating))  # Clamp to reasonable range
+        
         return {
             "player_name": features.player_name or "",
+            "team": getattr(features, 'team_id', '') or "Unknown",
             "stats": {
+                # Basic stats
                 "kills": features.kills,
                 "deaths": features.deaths,
+                "assists": getattr(features, 'assists', 0),
                 "kd_ratio": round(features.kills / max(features.deaths, 1), 2),
                 "headshot_percentage": round(features.headshot_percentage * 100, 1),
-                "damage_per_round": round(features.damage_per_round, 1),
-                "flash_success_rate": round(features.flash_success_rate * 100, 1),
-                # Trade detection stats
+                "adr": round(adr, 1),
+                
+                # Competitive stats
+                "kast": round(kast * 100, 1),
+                "rating": round(rating, 2),
+                
+                # Opening duels
+                "entry_kills": getattr(features, 'entry_kills', 0),
                 "entry_deaths": getattr(features, 'entry_deaths', 0),
+                
+                # Clutches
+                "clutches_1v1_won": getattr(features, 'clutches_1v1_won', 0),
+                "clutches_1v1_attempted": getattr(features, 'clutches_1v1_attempted', 0),
+                "clutches_1vN_won": getattr(features, 'clutches_1vN_won', 0),
+                "clutches_1vN_attempted": getattr(features, 'clutches_1vN_attempted', 0),
+                
+                # Impact
+                "total_wpa": round(getattr(features, 'total_wpa', 0), 2),
+                "multikills": getattr(features, 'multikills', 0),
+                
+                # Trading
                 "traded_deaths": getattr(features, 'tradeable_deaths', 0),
                 "untradeable_death_ratio": round(getattr(features, 'untradeable_death_ratio', 0) * 100, 1),
                 "trade_potential_score": getattr(features, 'trade_potential_score', 0),
-                # Role detection
-                "detected_role": getattr(features, 'detected_role', 'support'),
-                "entry_death_ratio": round(getattr(features, 'entry_death_ratio', 0) * 100, 1),
-                "primary_death_area": getattr(features, 'primary_death_area', ''),
-                # Round phase deaths
-                "early_round_deaths": getattr(features, 'early_round_deaths', 0),
-                "mid_round_deaths": getattr(features, 'mid_round_deaths', 0),
-                "late_round_deaths": getattr(features, 'late_round_deaths', 0),
+                
+                # Utility
+                "flash_success_rate": round(features.flash_success_rate * 100, 1),
+                "flashes_thrown": getattr(features, 'flashes_thrown', 0),
+                "enemies_blinded": getattr(features, 'enemies_blinded', 0),
+            },
+            "role": {
+                "detected": getattr(features, 'detected_role', 'Support'),
+                "confidence": 0.8,  # Placeholder, would be from classifier
             },
             "mistakes": [
                 {
@@ -145,13 +177,13 @@ class ReportGenerator:
                     "type": m.mistake_type,
                     "details": m.details,
                     "fix": m.correction,
-                    "severity": m.severity_label  # HIGH, MED, LOW
+                    "severity": m.severity_label.lower()  # "high", "medium", "low"
                 }
                 for m in mistakes
             ],
             "feedback": feedback,
             "improvement_priority": [
-                m.mistake_type for m in mistakes[:3]  # Top 3 priorities
+                m.mistake_type for m in mistakes[:3]
             ]
         }
     

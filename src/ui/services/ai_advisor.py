@@ -142,7 +142,7 @@ def _rule_based_advice(result: Dict[str, Any]) -> str:
     # Sort by count
     sorted_types = sorted(type_counts.items(), key=lambda x: -x[1])
     
-    # Generate tips for top issues
+    # Comprehensive advice map for all mistake types
     advice_map = {
         "wide_peek_no_utility": (
             "🎯 **Dry Peeking Issue**\n"
@@ -174,11 +174,45 @@ def _rule_based_advice(result: Dict[str, Any]) -> str:
             "Suboptimal buy decisions. "
             "Coordinate buys with team, don't force when team is saving."
         ),
+        "crossfire_death": (
+            "❌ **Crossfire Deaths**\n"
+            "Getting caught in enemy crossfires. "
+            "Use utility to isolate angles, or avoid common crossfire positions."
+        ),
+        "poor_positioning": (
+            "📍 **Positioning Errors**\n"
+            "Taking fights from disadvantaged positions. "
+            "Always secure cover and off-angles before engaging."
+        ),
+        "no_trade_potential": (
+            "🤝 **Trading Distance**\n"
+            "Dying too far from teammates. "
+            "Stay within 500-600 units to ensure trade potential."
+        ),
+        "entry_frag_bait": (
+            "⚡ **Entry Support**\n"
+            "Entry fraggers need support. "
+            "Flash for your entry, be ready to trade immediately."
+        ),
+        "late_rotate": (
+            "🔄 **Rotation Timing**\n"
+            "Rotating too slowly to bomb site. "
+            "Listen for audio cues and rotate earlier when info is clear."
+        ),
+        "peeking_without_info": (
+            "🔍 **Info Gathering**\n"
+            "Peeking without utility or info. "
+            "Use utility, drones, or teammate comms before dry-peeking."
+        ),
     }
     
     for mistake_type, count in sorted_types[:4]:
         if mistake_type in advice_map:
             tips.append(f"{advice_map[mistake_type]}\n*({count} instances found)*")
+        else:
+            # Generic advice for unknown types
+            readable_type = mistake_type.replace("_", " ").title()
+            tips.append(f"⚠️ **{readable_type}**\n*({count} instances found)*")
     
     if not tips:
         tips.append("✅ **Great Performance!**\nNo major recurring patterns found. Keep up the good work!")
