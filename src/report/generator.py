@@ -183,6 +183,26 @@ class ReportGenerator:
                 # Economy context
                 "adr_vs_eco": round(getattr(features, 'adr_vs_eco', 0), 1),
                 "adr_vs_fullbuy": round(getattr(features, 'adr_vs_fullbuy', 0), 1),
+                "eco_rounds_played": getattr(features, 'eco_rounds_played', 0),
+                "force_buy_rounds": getattr(features, 'force_buy_rounds', 0),
+                "full_buy_rounds": getattr(features, 'full_buy_rounds', 0),
+                "eco_round_kills": getattr(features, 'eco_round_kills', 0),
+                
+                # Aim Analysis
+                "avg_crosshair_placement": round(getattr(features, 'avg_crosshair_placement', 0), 2),
+                "reaction_time_avg": round(getattr(features, 'reaction_time_avg', 0), 1),
+                "time_to_damage": round(getattr(features, 'time_to_damage', 0), 1),
+                
+                # Utility Effectiveness
+                "smokes_thrown": getattr(features, 'smokes_thrown', 0),
+                "smoke_effectiveness": round(getattr(features, 'smoke_effectiveness', 0) * 100, 1),
+                "he_damage": getattr(features, 'he_damage', 0),
+                "molotov_damage": getattr(features, 'molotov_damage', 0),
+                "utility_adr": round(getattr(features, 'utility_adr', 0), 1),
+                
+                # Survival
+                "rounds_survived": getattr(features, 'rounds_survived', 0),
+                "survival_rate": round(getattr(features, 'survival_rate', 0) * 100, 1),
             },
             "role": {
                 "detected": getattr(features, 'detected_role', 'Support'),

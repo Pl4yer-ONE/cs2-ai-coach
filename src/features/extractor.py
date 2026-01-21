@@ -276,6 +276,29 @@ class PlayerFeatures:
     counter_strafing_score_avg: float = 0.0
     peek_types: Dict[str, int] = field(default_factory=lambda: {"jiggle": 0, "wide": 0, "dry": 0})
     
+    # Crosshair Placement (Advanced aim analysis)
+    avg_crosshair_placement: float = 0.0  # Avg angle adjustment needed to hit target (degrees)
+    time_to_damage: float = 0.0           # Avg ms from spotting enemy to dealing damage
+    reaction_time_avg: float = 0.0        # Avg reaction time on kills (ms)
+    
+    # Utility Effectiveness (Advanced)
+    smokes_thrown: int = 0
+    smoke_effectiveness: float = 0.0      # % smokes that blocked enemy vision effectively
+    he_damage: int = 0                    # Total HE grenade damage
+    molotov_damage: int = 0               # Total molotov/incendiary damage
+    utility_adr: float = 0.0              # Utility damage per round
+    
+    # Economy Decisions
+    eco_rounds_played: int = 0            # Rounds where team was on eco
+    force_buy_rounds: int = 0             # Rounds where team force bought
+    full_buy_rounds: int = 0              # Rounds where team had full buy
+    eco_round_kills: int = 0              # Kills during eco rounds (important for economy)
+    
+    # Survival Stats
+    rounds_survived: int = 0              # Rounds where player survived
+    survival_rate: float = 0.0            # % of rounds survived
+    avg_health_on_round_end: float = 0.0  # Avg health when surviving
+    
     # Legacy raw data
     death_events: List[Dict] = field(default_factory=list)
     kill_events: List[Dict] = field(default_factory=list)
