@@ -242,11 +242,11 @@ class FastRadarRenderer:
         draw.rectangle(bbox, fill=BOMB_COLOR, outline=(0, 0, 0), width=2)
     
     def _draw_hud(self, draw: ImageDraw.Draw, frame: TickFrame):
-        """Draw round info and player counts."""
-        # Round number
+        """Draw round info, player counts, and kill feed."""
+        # Round number (top left)
         draw.text((10, 10), f"Round {frame.round_num}", fill=(255, 255, 255), font=self._font)
         
-        # Player counts
+        # Player counts (top center)
         ct_alive = sum(1 for p in frame.players if p.team == 'CT' and p.alive)
         t_alive = sum(1 for p in frame.players if p.team == 'T' and p.alive)
         
@@ -257,7 +257,57 @@ class FastRadarRenderer:
         except:
             tw = len(count_text) * 7
         
-        draw.text((self.resolution - tw - 10, 10), count_text, fill=(255, 255, 255), font=self._font)
+        # Center the count
+        draw.text((self.resolution // 2 - tw // 2, 10), count_text, fill=(255, 255, 255), font=self._font)
+        
+        # Kill feed (right side) - show recent kills
+        self._draw_kill_feed(draw, frame)
+    
+    def _draw_kill_feed(self, draw: ImageDraw.Draw, frame: TickFrame):
+        """Draw kill feed on right side of radar."""
+        if not frame.kills:
+            return
+        
+        # Filter to recent kills (within display duration)
+        recent_kills = [k for k in frame.kills 
+                       if frame.tick - k.tick < k.duration_ticks]
+        
+        if not recent_kills:
+            return
+        
+        # Position kill feed on right side
+        x_start = self.resolution - 180
+        y_start = 40
+        line_height = 18
+        
+        # Draw background for kill feed
+        if recent_kills:
+            bg_height = min(len(recent_kills), 5) * line_height + 10
+            draw.rectangle(
+                [x_start - 5, y_start - 5, self.resolution - 5, y_start + bg_height],
+                fill=(0, 0, 0, 150)
+            )
+        
+        # Draw each kill entry (max 5)
+        for i, kill in enumerate(recent_kills[:5]):
+            y = y_start + i * line_height
+            
+            # Color based on attacker team
+            if kill.attacker_team == 'CT':
+                attacker_color = CT_COLOR
+                victim_color = T_COLOR
+            else:
+                attacker_color = T_COLOR
+                victim_color = CT_COLOR
+            
+            # Shorten names
+            attacker = kill.attacker_name[:8] if len(kill.attacker_name) > 8 else kill.attacker_name
+            victim = kill.victim_name[:8] if len(kill.victim_name) > 8 else kill.victim_name
+            
+            # Draw: attacker [weapon_icon] victim
+            draw.text((x_start, y), attacker, fill=attacker_color, font=self._font_small)
+            draw.text((x_start + 55, y), "×", fill=(255, 255, 255), font=self._font_small)
+            draw.text((x_start + 70, y), victim, fill=victim_color, font=self._font_small)
     
     def render_all(self, frames: list) -> None:
         """Render all frames with progress indicator."""

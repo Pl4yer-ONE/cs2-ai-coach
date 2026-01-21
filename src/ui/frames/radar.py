@@ -5,7 +5,7 @@ Radar Frame - Optimized video playback for radar replay
 import customtkinter as ctk
 from pathlib import Path
 from typing import Optional, List, TYPE_CHECKING
-from PIL import Image, ImageTk
+from PIL import Image
 import os
 
 from src.ui.theme import COLORS, FONTS, PADDING, FRAME, BUTTON_SECONDARY
@@ -215,7 +215,7 @@ class RadarFrame(ctk.CTkFrame):
             if i not in self._image_cache:
                 self._load_image(i)
     
-    def _load_image(self, index: int) -> Optional[ImageTk.PhotoImage]:
+    def _load_image(self, index: int) -> Optional[ctk.CTkImage]:
         """Load and cache an image."""
         if index in self._image_cache:
             return self._image_cache[index]
@@ -239,11 +239,8 @@ class RadarFrame(ctk.CTkFrame):
                 new_h = canvas_h
                 new_w = int(canvas_h * img_ratio)
             
-            # Use NEAREST for speed during playback, LANCZOS for static
-            resample = Image.Resampling.NEAREST if self.is_playing else Image.Resampling.LANCZOS
-            img = img.resize((new_w, new_h), resample)
-            
-            photo = ImageTk.PhotoImage(img)
+            # Use CTkImage for HiDPI support
+            ctk_image = ctk.CTkImage(light_image=img, dark_image=img, size=(new_w, new_h))
             
             # Cache with size limit
             if len(self._image_cache) > self._cache_size * 2:
@@ -252,8 +249,8 @@ class RadarFrame(ctk.CTkFrame):
                 for k in keys_to_remove:
                     del self._image_cache[k]
             
-            self._image_cache[index] = photo
-            return photo
+            self._image_cache[index] = ctk_image
+            return ctk_image
             
         except Exception as e:
             print(f"Error loading frame {index}: {e}")
