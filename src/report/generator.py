@@ -137,13 +137,16 @@ class ReportGenerator:
                 "headshot_percentage": round(features.headshot_percentage * 100, 1),
                 "adr": round(adr, 1),
                 
-                # Competitive stats
+                # Competitive stats (HLTV-style)
                 "kast": round(kast * 100, 1),
                 "rating": round(rating, 2),
+                "rws": round(getattr(features, 'rws', 0), 1),  # FACEIT RWS
                 
-                # Opening duels
+                # Opening duels / First Blood
                 "entry_kills": getattr(features, 'entry_kills', 0),
                 "entry_deaths": getattr(features, 'entry_deaths', 0),
+                "first_blood_attempts": getattr(features, 'first_blood_attempts', 0),
+                "first_blood_success": round(getattr(features, 'first_blood_success', 0) * 100, 1),
                 
                 # Clutches
                 "clutches_1v1_won": getattr(features, 'clutches_1v1_won', 0),
@@ -154,16 +157,32 @@ class ReportGenerator:
                 # Impact
                 "total_wpa": round(getattr(features, 'total_wpa', 0), 2),
                 "multikills": getattr(features, 'multikills', 0),
+                "swing_kills": getattr(features, 'swing_kills', 0),
                 
-                # Trading
+                # Trading (HLTV-style)
                 "traded_deaths": getattr(features, 'tradeable_deaths', 0),
+                "trades_given": getattr(features, 'trades_given', 0),
+                "trades_received": getattr(features, 'trades_received', 0),
+                "saved_teammates": getattr(features, 'saved_teammates', 0),
                 "untradeable_death_ratio": round(getattr(features, 'untradeable_death_ratio', 0) * 100, 1),
                 "trade_potential_score": getattr(features, 'trade_potential_score', 0),
                 
-                # Utility
+                # Utility (HLTV-style)
                 "flash_success_rate": round(features.flash_success_rate * 100, 1),
                 "flashes_thrown": getattr(features, 'flashes_thrown', 0),
+                "flash_assists": getattr(features, 'flash_assists', 0),
                 "enemies_blinded": getattr(features, 'enemies_blinded', 0),
+                "opp_flashed_time": round(getattr(features, 'opp_flashed_time', 0), 2),
+                
+                # Weapon breakdown
+                "awp_kills": getattr(features, 'awp_kills', 0),
+                "rifle_kills": getattr(features, 'rifle_kills', 0),
+                "pistol_kills": getattr(features, 'pistol_kills', 0),
+                "smg_kills": getattr(features, 'smg_kills', 0),
+                
+                # Economy context
+                "adr_vs_eco": round(getattr(features, 'adr_vs_eco', 0), 1),
+                "adr_vs_fullbuy": round(getattr(features, 'adr_vs_fullbuy', 0), 1),
             },
             "role": {
                 "detected": getattr(features, 'detected_role', 'Support'),

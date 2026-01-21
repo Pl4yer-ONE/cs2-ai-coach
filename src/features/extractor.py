@@ -225,10 +225,13 @@ class PlayerFeatures:
     flash_assists: int = 0
     flash_success_rate: float = 0.0
     grenade_damage: int = 0
+    opp_flashed_time: float = 0.0  # Avg time opponents were flashed (HLTV stat)
     
     # Weapon Stats
     awp_kills: int = 0
     rifle_kills: int = 0
+    pistol_kills: int = 0
+    smg_kills: int = 0
     
     # Per-round data
     rounds_played: int = 0
@@ -252,6 +255,22 @@ class PlayerFeatures:
     # KAST (Kill, Assist, Survived, Traded)
     kast_rounds: int = 0          # Rounds where player had K, A, S, or T
     kast_percentage: float = 0.0  # kast_rounds / rounds_played
+    
+    # Trade Stats (HLTV-style)
+    trades_given: int = 0         # Times player was traded (teammate killed killer)
+    trades_received: int = 0      # Times player traded a teammate
+    saved_teammates: int = 0      # Killed enemy attacking teammate within 1s (HLTV stat)
+    
+    # Economy Stats
+    adr_vs_eco: float = 0.0       # ADR against eco rounds (for context)
+    adr_vs_fullbuy: float = 0.0   # ADR against full buy rounds
+    
+    # First Blood Stats (HLTV-style)
+    first_blood_attempts: int = 0  # Times player was in first duel
+    first_blood_success: float = 0.0  # First blood win rate
+    
+    # Round Win Share (FACEIT-style RWS)
+    rws: float = 0.0              # Contribution to won rounds
     
     # Movement Mechanics
     counter_strafing_score_avg: float = 0.0
