@@ -26,3 +26,8 @@ seaborn>=0.12.0
 
 # Demo player
 pygame>=2.5.0
+
+# Desktop UI
+customtkinter>=5.2.0
+Pillow>=10.0.0
+
