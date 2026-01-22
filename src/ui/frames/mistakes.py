@@ -58,13 +58,18 @@ class MistakesFrame(ctk.CTkFrame):
         )
         self.player_filter.pack(side="left")
         
-        # Main content - two columns
+        # Main content - two columns with proper weights
         content = ctk.CTkFrame(self, fg_color="transparent")
         content.pack(fill="both", expand=True, padx=PADDING["large"], pady=PADDING["medium"])
         
+        # Configure grid for proper column sizing
+        content.grid_columnconfigure(0, weight=3)  # Mistakes list gets more space
+        content.grid_columnconfigure(1, weight=1)  # AI coach fixed width
+        content.grid_rowconfigure(0, weight=1)
+        
         # Left: Mistakes list
         left_frame = ctk.CTkFrame(content, **FRAME)
-        left_frame.pack(side="left", fill="both", expand=True, padx=(0, PADDING["medium"]))
+        left_frame.grid(row=0, column=0, sticky="nsew", padx=(0, PADDING["medium"]))
         
         left_header = ctk.CTkLabel(
             left_frame,
@@ -80,20 +85,22 @@ class MistakesFrame(ctk.CTkFrame):
         )
         self.mistakes_scroll.pack(fill="both", expand=True, padx=5, pady=5)
         
-        # Right: AI advice
-        right_frame = ctk.CTkFrame(content, width=400, **FRAME)
-        right_frame.pack(side="right", fill="y")
-        right_frame.pack_propagate(False)
+        # Right: AI advice (fixed width sidebar)
+        right_frame = ctk.CTkFrame(content, width=380, **FRAME)
+        right_frame.grid(row=0, column=1, sticky="nsew")
+        right_frame.grid_propagate(False)
         
-        ai_header = ctk.CTkFrame(right_frame, fg_color="transparent")
+        # AI Header
+        ai_header = ctk.CTkFrame(right_frame, fg_color="transparent", height=40)
         ai_header.pack(fill="x", padx=PADDING["medium"], pady=PADDING["medium"])
+        ai_header.pack_propagate(False)
         
         ctk.CTkLabel(
             ai_header,
             text="🤖 AI Coach",
-            font=FONTS["subheading"],
-            text_color=COLORS["text_primary"]
-        ).pack(side="left")
+            font=FONTS["heading"],
+            text_color=COLORS["accent_cyan"]
+        ).pack(side="left", anchor="w")
         
         self.ai_status = ctk.CTkLabel(
             ai_header,
@@ -101,37 +108,41 @@ class MistakesFrame(ctk.CTkFrame):
             font=FONTS["small"],
             text_color=COLORS["text_muted"]
         )
-        self.ai_status.pack(side="right")
+        self.ai_status.pack(side="right", anchor="e")
         
-        # AI advice content
+        # AI advice content - scrollable
         self.ai_content = ctk.CTkScrollableFrame(
             right_frame,
             fg_color=COLORS["bg_light"],
-            corner_radius=8
+            corner_radius=10
         )
-        self.ai_content.pack(fill="both", expand=True, padx=PADDING["medium"], pady=(0, PADDING["medium"]))
+        self.ai_content.pack(fill="both", expand=True, padx=PADDING["medium"], pady=(0, PADDING["small"]))
         
         self.ai_text = ctk.CTkLabel(
             self.ai_content,
             text="Run analysis to get AI coaching advice.",
             font=FONTS["body"],
             text_color=COLORS["text_secondary"],
-            wraplength=360,
-            justify="left"
+            wraplength=340,
+            justify="left",
+            anchor="nw"
         )
-        self.ai_text.pack(anchor="w", padx=10, pady=10)
+        self.ai_text.pack(anchor="nw", padx=PADDING["medium"], pady=PADDING["medium"], fill="x")
         
-        # Refresh advice button
+        # Refresh advice button - at bottom
         self.refresh_btn = ctk.CTkButton(
             right_frame,
             text="🔄 Get Fresh Advice",
             command=self._refresh_advice,
             state="disabled",
+            height=36,
+            corner_radius=8,
             fg_color=COLORS["accent_cyan"],
-            hover_color="#3db8b0",
-            text_color=COLORS["bg_dark"]
+            hover_color="#00B8E6",
+            text_color=COLORS["bg_dark"],
+            font=FONTS["body_bold"]
         )
-        self.refresh_btn.pack(pady=PADDING["medium"])
+        self.refresh_btn.pack(fill="x", padx=PADDING["medium"], pady=PADDING["medium"])
         
         # Placeholder
         self.placeholder = ctk.CTkLabel(
