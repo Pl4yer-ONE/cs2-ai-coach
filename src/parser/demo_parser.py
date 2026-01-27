@@ -199,9 +199,9 @@ class DemoParser:
         
         # Parse grenade detonations
         try:
-            he_df = parser.parse_event("hegrenade_detonate", player=["X", "Y", "Z"])
-            smoke_df = parser.parse_event("smokegrenade_detonate", player=["X", "Y", "Z"])
-            flash_det_df = parser.parse_event("flashbang_detonate", player=["X", "Y", "Z"])
+            he_df = parser.parse_event("hegrenade_detonate", player=["X", "Y", "Z", "name", "team_name"])
+            smoke_df = parser.parse_event("smokegrenade_detonate", player=["X", "Y", "Z", "name", "team_name"])
+            flash_det_df = parser.parse_event("flashbang_detonate", player=["X", "Y", "Z", "name", "team_name"])
             
             grenades_list = []
             if he_df is not None and len(he_df) > 0:

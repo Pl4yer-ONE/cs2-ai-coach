@@ -311,6 +311,101 @@ class TestUtilityWasteDetector:
         detector = UtilityWasteDetector()
         assert detector.FLASH_FOLLOWUP_WINDOW_MS == 2000
 
+    def test_detects_wasted_flash(self, mock_demo_with_kills):
+        """Detect flash with no follow-up kill."""
+        # Create a demo with a flash that has no follow-up
+        demo = mock_demo_with_kills
+
+        # Add grenade data
+        # Flash at tick 1500 (approx 96s)
+        # Kill at tick 2000 (approx 128s) -> >2s later
+        demo.grenades = pd.DataFrame({
+            'grenade_type': ['flashbang'],
+            'tick': [1500],
+            'name': ['PlayerA'],
+            'team_name': ['CT'],
+            'x': [0], 'y': [0], 'z': [0],
+            'round_num': [1]  # Ensure round number is set
+        })
+
+        # The existing kills in mock_demo_with_kills are at ticks 1000, 1100, 1300, 2000...
+        # Flash at 1500. Next kill is 2000.
+        # Difference = 500 ticks. 500 * 0.015625 = 7.8s > 2s.
+        # So this flash should be wasted.
+
+        detector = UtilityWasteDetector()
+        mistakes = detector.detect(demo, 1) # Round 1
+
+        # Should detect 1 mistake
+        assert len(mistakes) == 1
+        assert mistakes[0].error_type == "UTILITY_WASTE"
+        assert mistakes[0].player == "PlayerA"
+
+    def test_ignores_good_flash(self, mock_demo_with_kills):
+        """Ignore flash that has follow-up kill."""
+        demo = mock_demo_with_kills
+
+        # Flash at tick 1050
+        # Kill at tick 1100 (PlayerB kills PlayerA) - within 50 ticks (<1s)
+        demo.grenades = pd.DataFrame({
+            'grenade_type': ['flashbang'],
+            'tick': [1050],
+            'name': ['PlayerB'],
+            'team_name': ['Terrorist'],
+            'x': [0], 'y': [0], 'z': [0],
+            'round_num': [1] # Ensure round number is set
+        })
+
+        detector = UtilityWasteDetector()
+        mistakes = detector.detect(demo, 1)
+
+        assert len(mistakes) == 0
+
+    def test_detects_with_missing_round_columns(self, mock_demo_with_kills):
+        """Detect mistakes when round columns are missing from dataframes."""
+        demo = mock_demo_with_kills
+
+        # Remove round_num from kills to trigger tick-based filtering
+        if 'round_num' in demo.kills.columns:
+            demo.kills = demo.kills.drop(columns=['round_num'])
+
+        # Ensure rounds info exists for mapping
+        demo.rounds = pd.DataFrame({
+            'round_num': [1],
+            'start_tick': [0],
+            'end_tick': [2000],
+        })
+
+        # Add flash and kill within window
+        # Flash at 1050, Kill at 1100. Should be NO mistake.
+        demo.grenades = pd.DataFrame({
+            'grenade_type': ['flashbang'],
+            'tick': [1050],
+            'name': ['PlayerB'],
+            'team_name': ['Terrorist'],
+            'x': [0], 'y': [0], 'z': [0]
+            # No round_num here either
+        })
+
+        detector = UtilityWasteDetector()
+        mistakes = detector.detect(demo, 1)
+
+        assert len(mistakes) == 0
+
+        # Add wasted flash
+        # Flash at 1500, no kill after (next kill in mock_demo is 2000 > 2s later)
+        demo.grenades = pd.DataFrame({
+            'grenade_type': ['flashbang'],
+            'tick': [1500],
+            'name': ['PlayerA'],
+            'team_name': ['CT'],
+            'x': [0], 'y': [0], 'z': [0]
+        })
+
+        mistakes = detector.detect(demo, 1)
+        assert len(mistakes) == 1
+        assert mistakes[0].player == "PlayerA"
+
 
 # ============================================================================
 # Postplant Misplay Detector Tests

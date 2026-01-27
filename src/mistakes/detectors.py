@@ -19,6 +19,7 @@ from dataclasses import dataclass, asdict
 from typing import List, Dict, Any, Optional
 from enum import Enum
 import math
+import pandas as pd
 
 # Import contextual WPA for weighted calculations
 try:
@@ -338,14 +339,93 @@ class UtilityWasteDetector(MistakeDetector):
         # Check for flash assists or thrown flashes
         # Simplified: if flash thrown and no kill within window, flag as waste
         grenades = getattr(parsed_demo, 'grenades', None)
-        if grenades is None:
+        if grenades is None or grenades.empty:
             return mistakes
         
         # Filter flashes in this round
-        # Implementation depends on demo parser structure
-        # Placeholder logic:
+        round_col = 'total_rounds_played' if 'total_rounds_played' in grenades.columns else 'round_num'
+        if round_col in grenades.columns:
+            round_grenades = grenades[grenades[round_col] == round_num]
+        else:
+            # Fallback: if no round info in grenades, assume they are global and filter by tick?
+            # Or assume we can't map them.
+            # But the parser usually adds round info if available or we can use round start/end ticks.
+            # For now, let's check ticks if rounds dataframe exists
+            if hasattr(parsed_demo, 'rounds') and not parsed_demo.rounds.empty:
+                round_info = parsed_demo.rounds[parsed_demo.rounds['round_num'] == round_num if 'round_num' in parsed_demo.rounds.columns else parsed_demo.rounds.index == round_num-1]
+                if not round_info.empty:
+                    start_tick = round_info.iloc[0].get('round_start_tick', 0) if 'round_start_tick' in round_info.columns else round_info.iloc[0].get('start_tick', 0)
+                    end_tick = round_info.iloc[0].get('round_end_tick', 99999999) if 'round_end_tick' in round_info.columns else round_info.iloc[0].get('end_tick', 99999999)
+
+                    round_grenades = grenades[(grenades['tick'] >= start_tick) & (grenades['tick'] <= end_tick)]
+                else:
+                    return mistakes
+            else:
+                return mistakes
+
+        flashes = round_grenades[round_grenades['grenade_type'] == 'flashbang']
+        if flashes.empty:
+            return mistakes
+
+        kills = parsed_demo.kills
+        if kills is None or kills.empty:
+            # If no kills but flashes thrown, maybe wasted?
+            # But we only check for entry/trade support.
+            pass
+
+        # Get kills for this round
+        round_kills = pd.DataFrame()
+        if kills is not None and not kills.empty:
+            k_round_col = 'total_rounds_played' if 'total_rounds_played' in kills.columns else 'round_num'
+            if k_round_col in kills.columns:
+                round_kills = kills[kills[k_round_col] == round_num]
+            else:
+                # Fallback: filter by tick if round info is available in parsed_demo.rounds
+                if hasattr(parsed_demo, 'rounds') and not parsed_demo.rounds.empty:
+                    # Use the same logic as for grenades above
+                    round_info = parsed_demo.rounds[parsed_demo.rounds['round_num'] == round_num if 'round_num' in parsed_demo.rounds.columns else parsed_demo.rounds.index == round_num-1]
+                    if not round_info.empty:
+                        start_tick = round_info.iloc[0].get('round_start_tick', 0) if 'round_start_tick' in round_info.columns else round_info.iloc[0].get('start_tick', 0)
+                        end_tick = round_info.iloc[0].get('round_end_tick', 99999999) if 'round_end_tick' in round_info.columns else round_info.iloc[0].get('end_tick', 99999999)
+
+                        round_kills = kills[(kills['tick'] >= start_tick) & (kills['tick'] <= end_tick)]
+
+        for _, flash in flashes.iterrows():
+            flash_tick = int(flash.get('tick', 0))
+            thrower = str(flash.get('name', flash.get('user_name', '')))
+            team = str(flash.get('team_name', ''))
+
+            if not thrower:
+                continue
+
+            # Check for ANY kill by ANYONE on thrower's team within window
+            # Window: flash_tick to flash_tick + window
+            window_ticks = self.FLASH_FOLLOWUP_WINDOW_MS / 15.625
+
+            success = False
+            if not round_kills.empty:
+                for _, kill in round_kills.iterrows():
+                    kill_tick = int(kill.get('tick', 0))
+                    attacker_team = str(kill.get('attacker_team_name', ''))
+
+                    if attacker_team == team:
+                        if 0 <= (kill_tick - flash_tick) <= window_ticks:
+                            success = True
+                            break
+
+            if not success:
+                mistakes.append(DetectedMistake(
+                    round=round_num,
+                    timestamp_ms=int(flash_tick * 15.625),
+                    player=thrower,
+                    error_type=self.error_type.value,
+                    severity=Severity.LOW.value,
+                    wpa_loss=0.02,
+                    map_pos={"x": float(flash.get('x', flash.get('X', 0))), "y": float(flash.get('y', flash.get('Y', 0)))},
+                    details=f"Flash with no entry/kill follow-up within 2s"
+                ))
         
-        return mistakes  # Requires grenade tracking data
+        return mistakes
 
 
 class PostplantMisplayDetector(MistakeDetector):
